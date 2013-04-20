@@ -4,24 +4,29 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import net.spy.memcached.CASResponse;
-import net.spy.memcached.CASValue;
 import net.spy.memcached.internal.OperationFuture;
 
+import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.couchbase.client.CouchbaseClient;
 
 class MailStorageQueueThreads extends Thread
 {
 	private final AtomicBoolean running = new AtomicBoolean(true);
-	private final BlockingQueue<SerializedMail> queue;
-	private final MailStorageQueue distributor;
+	private final BlockingQueue<SerializedMail> incomingQueue;
+	private final IntObjectOpenHashMap<ReceiverLookupDocument> lookupMap;
+	private final int threadNo;
+	private final MailStorageQueue mailStorageQueue;
 	private final CouchbaseClient client;
 	private final int maxRetries;
 	
-	protected MailStorageQueueThreads(final MailStorageQueue distributor, final CouchbaseClient client, final int maxRetries)
+	private int maxTriesUsed = 0;
+	
+	protected MailStorageQueueThreads(final MailStorageQueue mailStorageQueue, final int threadNo, final CouchbaseClient client, final int maxRetries)
 	{
-		this.queue = new LinkedBlockingQueue<SerializedMail>();
-		this.distributor = distributor;
+		this.incomingQueue = new LinkedBlockingQueue<SerializedMail>();
+		this.lookupMap = new IntObjectOpenHashMap<ReceiverLookupDocument>();
+		this.threadNo = threadNo;
+		this.mailStorageQueue = mailStorageQueue;
 		this.client = client;
 		this.maxRetries = maxRetries;
 	}
@@ -29,150 +34,162 @@ class MailStorageQueueThreads extends Thread
 	@Override
 	public void run()
 	{
-		while (running.get() || queue.size() > 0)
+		while (running.get() || incomingQueue.size() > 0)
 		{
 			try
 			{
-				final SerializedMail mail = queue.take();
+				final SerializedMail mail = incomingQueue.take();
 				if (mail != null && !(mail instanceof PoisionedSerializedMail))
 				{
-					if (mailReceiverLookupUpdate(mail))
+					if (updateReceiverLookupDocument(mail))
 					{
-						persistMail(mail);
+						if (!persistMail(mail))
+						{
+							System.err.println("Could not persist mail_" + mail.getKey() + " for receiver " + mail.getReceiverID());
+						}
 					}
 				}
 			}
 			catch (InterruptedException e)
 			{
+				System.err.println("Could not take mail from queue: " + e.getMessage());
 			}
 		}
-		distributor.countdown();
+		System.out.println("# " + threadNo + " Max tries used: " + maxTriesUsed);
+		mailStorageQueue.countdown();
 	}
 	
 	protected void addMail(final SerializedMail mail)
 	{
-		queue.add(mail);
+		incomingQueue.add(mail);
+	}
+	
+	protected int size()
+	{
+		return incomingQueue.size();
 	}
 	
 	protected void shutdown()
 	{
 		running.set(false);
-		queue.add(new PoisionedSerializedMail());
+		incomingQueue.add(new PoisionedSerializedMail());
 	}
 	
-	private boolean mailReceiverLookupUpdate(final SerializedMail mail)
+	private boolean updateReceiverLookupDocument(final SerializedMail mail)
 	{
-		// Lookup or create lookup document
-		final String lookupDocumentKey = "receiver_" + mail.getReceiverID();
-		int totalTries = 0;
-		while (++totalTries < maxRetries)
+		final int receiverID = mail.getReceiverID();
+		final String lookupDocumentKey = "receiver_" + receiverID;
+
+		// Get lookup document
+		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
+		if (mailReceiverLookup == null)
 		{
-			CASValue<Object> casValue = null;
+			Object receiverLookupDocumentObject = null;
+			boolean retry = true;
 			int tries = 0;
-			while (casValue == null && ++tries < maxRetries)
+			while (retry && ++tries < maxRetries)
 			{
+				if (tries > maxTriesUsed)
+				{
+					maxTriesUsed = tries;
+				}
+				retry = false;
 				try
 				{
-					casValue = client.gets(lookupDocumentKey);
+					receiverLookupDocumentObject = client.get(lookupDocumentKey);
 				}
 				catch (Exception e)
 				{
-					try
-					{
-						Thread.sleep(10 + (tries * 5));
-					}
-					catch (InterruptedException e1)
-					{
-					}
+					retry = true;
+					System.err.println("Could not read lookup document for " + receiverID + ": " + e.getMessage());
+					threadSleep(tries * 5);
 				}
 			}
-			ReceiverLookupDocument mailReceiverLookup;
-			if (casValue == null)
+			if (retry)
 			{
-				mailReceiverLookup = new ReceiverLookupDocument();
-				//System.out.println("Add new lookup document for receiver " + mail.getReceiverID());
-			}
-			else
-			{
-				mailReceiverLookup = ReceiverLookupDocument.fromJSON((String)casValue.getValue());
-				//System.out.println("Update existing lookup document for receiver " + mail.getReceiverID() + " (" + mailReceiverLookup.getLookup().toString() + ")");
-			}
-			
-			// Modify lookup document
-			if (!mailReceiverLookup.add(mail.getCreated(), mail.getKey()))
-			{
-				//System.err.println("Could not add mail with same key for mail " + mail.getKey());
+				System.err.println("Could not read lookup document for " + receiverID + " (permanently)");
 				return false;
 			}
-			
-			// Store lookup document
-			if (casValue == null)
+			else if (receiverLookupDocumentObject != null)
 			{
-				// Insert new lookup document
-				try
-				{
-					OperationFuture<Boolean> addSuccess = client.add("receiver_" + mail.getReceiverID(), 0, mailReceiverLookup.toJSON());
-					if (addSuccess.get())
-					{
-						// System.out.println("Saved new lookup document for mail_" + mail.getKey());
-						return true;
-					}
-				}
-				catch (Exception e)
-				{
-					//System.err.println("Could not add lookup document for mail_" + mail.getKey());
-					return false;
-				}
+				mailReceiverLookup = ReceiverLookupDocument.fromJSON((String)receiverLookupDocumentObject);
 			}
 			else
 			{
-				try
+				mailReceiverLookup = new ReceiverLookupDocument();
+			}
+			lookupMap.put(receiverID, mailReceiverLookup);
+		}
+			
+		// Modify lookup document
+		if (!mailReceiverLookup.add(mail.getCreated(), mail.getKey()))
+		{
+			System.err.println("Could not add mail with same key for mail " + mail.getKey());
+			return false;
+		}
+		
+		// Store lookup document
+		final String document = mailReceiverLookup.toJSON();
+		int tries = 0;
+		while (++tries < maxRetries)
+		{
+			if (tries > maxTriesUsed)
+			{
+				maxTriesUsed = tries;
+			}
+			try
+			{
+				OperationFuture<Boolean> replaceFuture = client.set(lookupDocumentKey, 0, document);
+				if (replaceFuture.get())
 				{
-					// Update existing lookup document
-					CASResponse response = client.cas(lookupDocumentKey, casValue.getCas(), mailReceiverLookup.toJSON());
-					if (response.equals(CASResponse.OK))
-					{
-						//System.out.println("Updated lookup document for mail_" + mail.getKey() + " (" + mailReceiverLookup.getLookup().toString() + ")");
-						return true;
-					}
-				}
-				catch (Exception e)
-				{
-					//System.err.println("Could not update lookup document for mail_" + mail.getKey());
-					return false;
+					return true;
 				}
 			}
+			catch (Exception e)
+			{
+				System.err.println("Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
+			}
 		}
-		//System.err.println("Could not update lookup document within " + maxRetries + " tries for mail_" + mail.getKey());
+		System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");
 		return false;
 	}
 	
-	private void persistMail(final SerializedMail mail)
+	private boolean persistMail(final SerializedMail mail)
 	{
 		int tries = 0;
 		while (++tries < maxRetries)
 		{
+			if (tries > maxTriesUsed)
+			{
+				maxTriesUsed = tries;
+			}
 			try
 			{
 				OperationFuture<Boolean> addSuccess = client.add("mail_" + mail.getKey(), 0, mail.getDocument());
 				if (addSuccess.get())
 				{
-					return;
+					return true;
 				}
 			}
 			catch (Exception e)
 			{
-				try
-				{
-					Thread.sleep(10 + (tries * 5));
-				}
-				catch (InterruptedException e1)
-				{
-					e1.printStackTrace();
-				}
+				System.err.println("Could not add mail for receiver " + mail.getReceiverID() + ": " + e.getMessage());
+				threadSleep(tries * 5);
 			}
 		}
-		System.err.println("Could not persist mail for receiver " + mail.getReceiverID() + ": mail_" + mail.getKey());
+		System.err.println("Could not add mail for receiver " + mail.getReceiverID() + " (permanently)");
+		return false;
+	}
+	
+	private void threadSleep(final long milliseconds)
+	{
+		try
+		{
+			Thread.sleep(milliseconds);
+		}
+		catch (InterruptedException e)
+		{
+		}
 	}
 	
 	private class PoisionedSerializedMail extends SerializedMail

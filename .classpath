@@ -28,5 +28,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/CouchbaseMailExample/lib/gson-2.2.3-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/hppc-0.4.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

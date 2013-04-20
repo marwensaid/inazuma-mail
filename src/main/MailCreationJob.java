@@ -22,12 +22,12 @@ public class MailCreationJob implements Runnable
 	private static final Random generator = new Random();
 	
 	private final ScheduledExecutorService threadPool;
-	private final MailStorageQueue distributor;
+	private final MailStorageQueue mailStorageQueue;
 	
-	public MailCreationJob(final ScheduledExecutorService threadPool, final MailStorageQueue distributor)
+	public MailCreationJob(final ScheduledExecutorService threadPool, final MailStorageQueue mailStorageQueue)
 	{
 		this.threadPool = threadPool;
-		this.distributor = distributor;
+		this.mailStorageQueue = mailStorageQueue;
 	}
 
 	@Override
@@ -65,7 +65,7 @@ public class MailCreationJob implements Runnable
 		}
 		
 		// Put mail on storage queue
-		distributor.addMail(new SerializedMail(receiverID, mail.getCreated(), mail.getKey(), gson.toJson(mail)));
+		mailStorageQueue.addMail(new SerializedMail(receiverID, mail.getCreated(), mail.getKey(), gson.toJson(mail)));
 		
 		if (!threadPool.isShutdown() && !threadPool.isTerminated())
 		{

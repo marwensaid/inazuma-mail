@@ -1,6 +1,7 @@
 package queue;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,16 +15,11 @@ public class ReceiverLookupDocument
 	{
 	}
 	
-	public ReceiverLookupDocument(Map<String, Long> lookup)
+	private ReceiverLookupDocument(Map<String, Long> lookup)
 	{
 		this.lookup.putAll(lookup);
 	}
 	
-	public ConcurrentMap<String, Long> getLookup()
-	{
-		return lookup;
-	}
-
 	public boolean add(final long created, final String mailKey)
 	{
 		if (lookup.putIfAbsent(mailKey, created) != null)
@@ -33,6 +29,16 @@ public class ReceiverLookupDocument
 		return true;
 	}
 	
+	public int size()
+	{
+		return lookup.size();
+	}
+
+	public Set<String> keySet()
+	{
+		return lookup.keySet();
+	}
+
 	public String toJSON()
 	{
 		Gson gson = new Gson();

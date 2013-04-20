@@ -18,19 +18,16 @@ public class Main
 		final long runtime = Config.RUNTIME;
 		final CouchbaseClient client = ConnectionManager.getConnection();
 		
-		// Statistics
-		(new MailReadJob()).run();
-		System.out.println();
-		
 		// Startup mail storage threads
-		MailStorageQueue distributor = new MailStorageQueue(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
+		MailStorageQueue mailStorageQueue = new MailStorageQueue(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
 		
 		// Configure thread pool
 		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(10);
 		for (int i = 0; i < Config.CREATION_JOBS; ++i)
 		{
-			threadPool.submit(new MailCreationJob(threadPool, distributor));
+			threadPool.submit(new MailCreationJob(threadPool, mailStorageQueue));
 		}
+		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
 		
 		// Create mails
 		System.out.println("Create mails for " + runtime + " ms...");
@@ -43,7 +40,7 @@ public class Main
 		}
 		
 		// Shutdown of thread pool
-		System.out.println("Shutting down thread pool for MailCreationJob...");
+		System.out.println("Shutting down thread pool...");
 		threadPool.shutdown();
 		try
 		{
@@ -57,8 +54,8 @@ public class Main
 		
 		// Shutdown storage threads
 		System.out.println("Shutting down storage threads...");
-		distributor.shutdown();
-		distributor.awaitShutdown();
+		mailStorageQueue.shutdown();
+		mailStorageQueue.awaitShutdown();
 		System.out.println("Done!\n");
 
 		// Statistics

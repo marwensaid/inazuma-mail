@@ -20,7 +20,7 @@ public class MailStorageQueue
 		
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueThreads(this, client, maxRetries);
+			threads[i] = new MailStorageQueueThreads(this, i, client, maxRetries);
 			threads[i].start();
 		}
 	}
@@ -29,6 +29,16 @@ public class MailStorageQueue
 	{
 		final int threadNumber = mail.getReceiverID() % numberOfThreads;
 		threads[threadNumber].addMail(mail);
+	}
+	
+	public int size()
+	{
+		int size = 0;
+		for (int i = 0; i < numberOfThreads; i++)
+		{
+			size += threads[i].size();
+		}
+		return size;
 	}
 
 	public void shutdown()
@@ -43,7 +53,17 @@ public class MailStorageQueue
 	{
 		try
 		{
-			latch.await(60, TimeUnit.MINUTES);
+			final long start = System.nanoTime();
+			final long limit = TimeUnit.MINUTES.toNanos(60);
+			while ((System.nanoTime() - start) < limit)
+			{
+				latch.await(5, TimeUnit.SECONDS);
+				System.out.println("Mail queue size: " + size());
+				if (latch.getCount() == 0)
+				{
+					break;
+				}
+			}
 		}
 		catch (InterruptedException e)
 		{

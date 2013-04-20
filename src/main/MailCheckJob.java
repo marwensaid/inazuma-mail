@@ -43,10 +43,10 @@ public class MailCheckJob implements Runnable
 			if (lookupFile != null)
 			{
 				ReceiverLookupDocument mailReceiverDocument = ReceiverLookupDocument.fromJSON(lookupFile);
-				System.out.println("Receiver " + receiverID + " should have " + mailReceiverDocument.getLookup().size() + " mails");
-				numberOfMailsExpected += mailReceiverDocument.getLookup().size();
+				System.out.println("Receiver " + receiverID + " should have " + mailReceiverDocument.size() + " mails");
+				numberOfMailsExpected += mailReceiverDocument.size();
 				numberOfReceivers++;
-				for (String mailKey : mailReceiverDocument.getLookup().keySet())
+				for (String mailKey : mailReceiverDocument.keySet())
 				{
 					Map<String, String> mailStats = null;
 					getTries = 0;
