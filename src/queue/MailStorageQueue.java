@@ -57,8 +57,8 @@ public class MailStorageQueue
 			final long limit = TimeUnit.MINUTES.toNanos(60);
 			while ((System.nanoTime() - start) < limit)
 			{
-				latch.await(5, TimeUnit.SECONDS);
 				System.out.println("Mail queue size: " + size());
+				latch.await(5, TimeUnit.SECONDS);
 				if (latch.getCount() == 0)
 				{
 					return;

@@ -6,12 +6,12 @@ public class Config
 {
 	public static final long RUNTIME = TimeUnit.SECONDS.toMillis(300);
 	
-	public static final int CREATION_JOBS = 15;
+	public static final int CREATION_JOBS = 10;
 	public static final int CREATION_DELAY = 500;
 	public static final TimeUnit CREATION_TIMEUNIT = TimeUnit.MICROSECONDS;
 
 	public static final int STORAGE_THREADS = 50;
-	public static final int MAX_RETRIES = 50;
+	public static final int MAX_RETRIES = 100;
 	
 	public static final int MIN_USER = 1;
 	public static final int MAX_USER = 100000;

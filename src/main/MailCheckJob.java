@@ -16,11 +16,17 @@ public class MailCheckJob implements Runnable
 	{
 		final CouchbaseClient client = ConnectionManager.getConnection();
 		
+		System.out.println("Checking lookup documents and mails...");
+		
 		int numberOfMailsExpected = 0;
 		int numberOfMailsFound = 0;
 		int numberOfReceivers = 0;
 		for (int receiverID = Config.MIN_USER; receiverID <= Config.MAX_USER; ++receiverID)
 		{
+			if (receiverID % 5000 == 0)
+			{
+				System.out.println("User " + receiverID + "/" + Config.MAX_USER);
+			}
 			String lookupFile = null;
 			int getTries = 0;
 			while (lookupFile == null && ++getTries < Config.MAX_RETRIES)

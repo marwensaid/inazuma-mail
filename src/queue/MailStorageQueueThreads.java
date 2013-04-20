@@ -11,6 +11,8 @@ import com.couchbase.client.CouchbaseClient;
 
 class MailStorageQueueThreads extends Thread
 {
+	private final static int RETRY_DELAY = 50;
+	
 	private final AtomicBoolean running = new AtomicBoolean(true);
 	private final BlockingQueue<SerializedMail> incomingQueue;
 	private final IntObjectOpenHashMap<ReceiverLookupDocument> lookupMap;
@@ -126,7 +128,7 @@ class MailStorageQueueThreads extends Thread
 			{
 				retry = true;
 				System.err.println("Could not read lookup document for " + receiverID + ": " + e.getMessage());
-				threadSleep(tries * 5);
+				threadSleep(tries * RETRY_DELAY);
 			}
 		}
 		if (retry)
@@ -165,7 +167,7 @@ class MailStorageQueueThreads extends Thread
 			catch (Exception e)
 			{
 				System.err.println("Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
-				threadSleep(tries * 5);
+				threadSleep(tries * RETRY_DELAY);
 			}
 		}
 		System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");
@@ -192,7 +194,7 @@ class MailStorageQueueThreads extends Thread
 			catch (Exception e)
 			{
 				System.err.println("Could not add mail for receiver " + mail.getReceiverID() + ": " + e.getMessage());
-				threadSleep(tries * 5);
+				threadSleep(tries * RETRY_DELAY);
 			}
 		}
 		System.err.println("Could not add mail for receiver " + mail.getReceiverID() + " (permanently)");

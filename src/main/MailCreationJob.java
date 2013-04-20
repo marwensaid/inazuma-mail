@@ -14,7 +14,6 @@ import mail.MailUser;
 
 import com.google.gson.Gson;
 
-
 public class MailCreationJob implements Runnable
 {
 	private static final Gson gson = new Gson();

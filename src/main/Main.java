@@ -17,20 +17,21 @@ public class Main
 	{
 		final long runtime = Config.RUNTIME;
 		final CouchbaseClient client = ConnectionManager.getConnection();
-		
+
 		// Startup mail storage threads
 		MailStorageQueue mailStorageQueue = new MailStorageQueue(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
 		
 		// Configure thread pool
+		System.out.println("Creating mails for " + runtime + " ms...");
 		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(10);
+		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
+		threadPool.submit(new ClusterStatusJob(threadPool, client));
 		for (int i = 0; i < Config.CREATION_JOBS; ++i)
 		{
 			threadPool.submit(new MailCreationJob(threadPool, mailStorageQueue));
 		}
-		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
 		
-		// Create mails
-		System.out.println("Create mails for " + runtime + " ms...");
+		// Wait until runtime is over
 		try
 		{
 			Thread.sleep(runtime);

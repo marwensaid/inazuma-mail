@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit;
 
 import queue.MailStorageQueue;
 
-
 public class MailQueueSizeJob implements Runnable
 {
 	private final ScheduledExecutorService threadPool;
