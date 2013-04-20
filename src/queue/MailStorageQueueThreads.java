@@ -55,7 +55,10 @@ class MailStorageQueueThreads extends Thread
 				System.err.println("Could not take mail from queue: " + e.getMessage());
 			}
 		}
-		System.out.println("# " + threadNo + " Max tries used: " + maxTriesUsed);
+		if (maxTriesUsed > 1)
+		{
+			System.out.println("# " + threadNo + " Max tries used: " + maxTriesUsed);
+		}
 		mailStorageQueue.countdown();
 	}
 	
@@ -84,39 +87,10 @@ class MailStorageQueueThreads extends Thread
 		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
 		if (mailReceiverLookup == null)
 		{
-			Object receiverLookupDocumentObject = null;
-			boolean retry = true;
-			int tries = 0;
-			while (retry && ++tries < maxRetries)
+			mailReceiverLookup = getLookup(receiverID, lookupDocumentKey);
+			if (mailReceiverLookup == null)
 			{
-				if (tries > maxTriesUsed)
-				{
-					maxTriesUsed = tries;
-				}
-				retry = false;
-				try
-				{
-					receiverLookupDocumentObject = client.get(lookupDocumentKey);
-				}
-				catch (Exception e)
-				{
-					retry = true;
-					System.err.println("Could not read lookup document for " + receiverID + ": " + e.getMessage());
-					threadSleep(tries * 5);
-				}
-			}
-			if (retry)
-			{
-				System.err.println("Could not read lookup document for " + receiverID + " (permanently)");
 				return false;
-			}
-			else if (receiverLookupDocumentObject != null)
-			{
-				mailReceiverLookup = ReceiverLookupDocument.fromJSON((String)receiverLookupDocumentObject);
-			}
-			else
-			{
-				mailReceiverLookup = new ReceiverLookupDocument();
 			}
 			lookupMap.put(receiverID, mailReceiverLookup);
 		}
@@ -129,6 +103,49 @@ class MailStorageQueueThreads extends Thread
 		}
 		
 		// Store lookup document
+		return persistLookup(receiverID, lookupDocumentKey, mailReceiverLookup);
+	}
+	
+	private ReceiverLookupDocument getLookup(final int receiverID, final String lookupDocumentKey)
+	{
+		Object receiverLookupDocumentObject = null;
+		boolean retry = true;
+		int tries = 0;
+		while (retry && ++tries < maxRetries)
+		{
+			if (tries > maxTriesUsed)
+			{
+				maxTriesUsed = tries;
+			}
+			retry = false;
+			try
+			{
+				receiverLookupDocumentObject = client.get(lookupDocumentKey);
+			}
+			catch (Exception e)
+			{
+				retry = true;
+				System.err.println("Could not read lookup document for " + receiverID + ": " + e.getMessage());
+				threadSleep(tries * 5);
+			}
+		}
+		if (retry)
+		{
+			System.err.println("Could not read lookup document for " + receiverID + " (permanently)");
+			return null;
+		}
+		else if (receiverLookupDocumentObject != null)
+		{
+			return ReceiverLookupDocument.fromJSON((String)receiverLookupDocumentObject);
+		}
+		else
+		{
+			return new ReceiverLookupDocument();
+		}
+	}
+	
+	private boolean persistLookup(final int receiverID, final String lookupDocumentKey, final ReceiverLookupDocument mailReceiverLookup)
+	{
 		final String document = mailReceiverLookup.toJSON();
 		int tries = 0;
 		while (++tries < maxRetries)
@@ -148,6 +165,7 @@ class MailStorageQueueThreads extends Thread
 			catch (Exception e)
 			{
 				System.err.println("Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
+				threadSleep(tries * 5);
 			}
 		}
 		System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");

@@ -61,7 +61,7 @@ public class MailStorageQueue
 				System.out.println("Mail queue size: " + size());
 				if (latch.getCount() == 0)
 				{
-					break;
+					return;
 				}
 			}
 		}
