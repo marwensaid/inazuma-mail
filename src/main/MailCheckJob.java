@@ -42,8 +42,8 @@ public class MailCheckJob implements Runnable
 			}
 			if (lookupFile != null)
 			{
+				boolean sizeShown = false;
 				ReceiverLookupDocument mailReceiverDocument = ReceiverLookupDocument.fromJSON(lookupFile);
-				System.out.println("Receiver " + receiverID + " should have " + mailReceiverDocument.size() + " mails");
 				numberOfMailsExpected += mailReceiverDocument.size();
 				numberOfReceivers++;
 				for (String mailKey : mailReceiverDocument.keySet())
@@ -74,6 +74,11 @@ public class MailCheckJob implements Runnable
 					}
 					else
 					{
+						if (!sizeShown)
+						{
+							System.out.println("Receiver " + receiverID + " should have " + mailReceiverDocument.size() + " mails");
+							sizeShown = true;
+						}
 						System.err.println("Mail not found for receiver " + receiverID + ": mail_" + mailKey);
 					}
 				}
