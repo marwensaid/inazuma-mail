@@ -31,12 +31,12 @@ public class MailQueueSizeJob implements Runnable
 		int newSize = mailStorageQueue.size();
 		if (lastSize > 0)
 		{
-			System.out.println("Mail queue size: " + newSize);
+			int diff = newSize - lastSize;
+			System.out.println("Mail queue size: " + newSize + " (" + (diff > 0 ? "+" : "") + diff + ")");
 		}
 		else
 		{
-			int diff = lastSize - newSize;
-			System.out.println("Mail queue size: " + newSize + " (" + (diff > 0 ? "+" : "") + diff + ")");
+			System.out.println("Mail queue size: " + newSize);
 		}
 		lastSize = newSize;
 		
