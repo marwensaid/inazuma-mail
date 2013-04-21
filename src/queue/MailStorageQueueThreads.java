@@ -168,7 +168,7 @@ class MailStorageQueueThreads extends Thread
 		Object receiverLookupDocumentObject = null;
 		boolean retry = true;
 		int tries = 0;
-		while (retry && ++tries < maxRetries)
+		while (retry && tries++ < maxRetries)
 		{
 			if (tries > maxTriesUsed)
 			{
@@ -205,7 +205,7 @@ class MailStorageQueueThreads extends Thread
 	{
 		final String document = mailReceiverLookup.toJSON();
 		int tries = 0;
-		while (++tries < maxRetries)
+		while (tries++ < maxRetries)
 		{
 			if (tries > maxTriesUsed)
 			{
@@ -233,7 +233,7 @@ class MailStorageQueueThreads extends Thread
 	private boolean persistMail(final SerializedMail mail)
 	{
 		int tries = 0;
-		while (++tries < maxRetries)
+		while (tries++ < maxRetries)
 		{
 			if (tries > maxTriesUsed)
 			{
