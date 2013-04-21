@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.spy.memcached.internal.OperationFuture;
 
 import com.carrotsearch.hppc.IntObjectOpenHashMap;
+import com.carrotsearch.hppc.IntOpenHashSet;
 import com.couchbase.client.CouchbaseClient;
 
 class MailStorageQueueThreads extends Thread
@@ -16,6 +17,7 @@ class MailStorageQueueThreads extends Thread
 	private final AtomicBoolean running = new AtomicBoolean(true);
 	private final BlockingQueue<SerializedMail> incomingQueue;
 	private final IntObjectOpenHashMap<ReceiverLookupDocument> lookupMap;
+	private final IntOpenHashSet receiverOnQueue;
 	private final int threadNo;
 	private final MailStorageQueue mailStorageQueue;
 	private final CouchbaseClient client;
@@ -27,6 +29,7 @@ class MailStorageQueueThreads extends Thread
 	{
 		this.incomingQueue = new LinkedBlockingQueue<SerializedMail>();
 		this.lookupMap = new IntObjectOpenHashMap<ReceiverLookupDocument>();
+		this.receiverOnQueue = new IntOpenHashSet();
 		this.threadNo = threadNo;
 		this.mailStorageQueue = mailStorageQueue;
 		this.client = client;
@@ -41,13 +44,45 @@ class MailStorageQueueThreads extends Thread
 			try
 			{
 				final SerializedMail mail = incomingQueue.take();
-				if (mail != null && !(mail instanceof PoisionedSerializedMail))
+				final int receiverID = mail.getReceiverID();
+				if (mail != null)
 				{
-					if (updateReceiverLookupDocument(mail))
+					if (mail instanceof PoisionedSerializedMail)
 					{
-						if (!persistMail(mail))
+						// Do nothing
+						// This mail just unblocks the queue so the thread can shutdown properly
+					}
+					else if (mail instanceof JustPersistLookupDocument)
+					{
+						// Persist lookup document
+						if (receiverOnQueue.contains(receiverID))
 						{
-							System.err.println("Could not persist mail_" + mail.getKey() + " for receiver " + mail.getReceiverID());
+							ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
+							if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), mailReceiverLookup))
+							{
+								System.err.println("Re-adding lookup document to queue for receiver " + receiverID);
+								incomingQueue.add(mail);
+								threadSleep(RETRY_DELAY);
+							}
+						}
+					}
+					else
+					{
+						// Persist mail
+						if (persistMail(mail))
+						{
+							if (!addMailToReceiverLookupDocument(mail))
+							{
+								System.err.println("Adding lookup document to queue for receiver " + receiverID);
+								removeMailFromReceiverLookupDocument(mail);
+								threadSleep(RETRY_DELAY);
+							}
+						}
+						else
+						{
+							System.err.println("Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
+							incomingQueue.add(mail);
+							threadSleep(RETRY_DELAY);
 						}
 					}
 				}
@@ -57,7 +92,7 @@ class MailStorageQueueThreads extends Thread
 				System.err.println("Could not take mail from queue: " + e.getMessage());
 			}
 		}
-		if (maxTriesUsed > 1)
+		if (maxTriesUsed > (maxRetries / 2))
 		{
 			System.out.println("# " + threadNo + " Max tries used: " + maxTriesUsed);
 		}
@@ -80,10 +115,15 @@ class MailStorageQueueThreads extends Thread
 		incomingQueue.add(new PoisionedSerializedMail());
 	}
 	
-	private boolean updateReceiverLookupDocument(final SerializedMail mail)
+	private String createLookupDocumentKey(final int receiverID)
+	{
+		return "receiver_" + receiverID;
+	}
+	
+	private boolean addMailToReceiverLookupDocument(final SerializedMail mail)
 	{
 		final int receiverID = mail.getReceiverID();
-		final String lookupDocumentKey = "receiver_" + receiverID;
+		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
 
 		// Get lookup document
 		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
@@ -106,6 +146,21 @@ class MailStorageQueueThreads extends Thread
 		
 		// Store lookup document
 		return persistLookup(receiverID, lookupDocumentKey, mailReceiverLookup);
+	}
+	
+	private void removeMailFromReceiverLookupDocument(final SerializedMail mail)
+	{
+		final int receiverID = mail.getReceiverID();
+		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
+
+		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
+		mailReceiverLookup.remove(lookupDocumentKey);
+		
+		if (!receiverOnQueue.contains(receiverID))
+		{
+			receiverOnQueue.add(receiverID);
+			incomingQueue.add(new JustPersistLookupDocument(receiverID));
+		}
 	}
 	
 	private ReceiverLookupDocument getLookup(final int receiverID, final String lookupDocumentKey)
@@ -158,9 +213,10 @@ class MailStorageQueueThreads extends Thread
 			}
 			try
 			{
-				OperationFuture<Boolean> replaceFuture = client.set(lookupDocumentKey, 0, document);
-				if (replaceFuture.get())
+				OperationFuture<Boolean> lookupFuture = client.set(lookupDocumentKey, 0, document);
+				if (lookupFuture.get())
 				{
+					receiverOnQueue.remove(receiverID);
 					return true;
 				}
 			}
@@ -170,7 +226,7 @@ class MailStorageQueueThreads extends Thread
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");
+		//System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");
 		return false;
 	}
 	
@@ -185,8 +241,8 @@ class MailStorageQueueThreads extends Thread
 			}
 			try
 			{
-				OperationFuture<Boolean> addSuccess = client.add("mail_" + mail.getKey(), 0, mail.getDocument());
-				if (addSuccess.get())
+				OperationFuture<Boolean> mailFuture = client.add("mail_" + mail.getKey(), 0, mail.getDocument());
+				if (mailFuture.get())
 				{
 					return true;
 				}
@@ -197,7 +253,7 @@ class MailStorageQueueThreads extends Thread
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		System.err.println("Could not add mail for receiver " + mail.getReceiverID() + " (permanently)");
+		//System.err.println("Could not add mail for receiver " + mail.getReceiverID() + " (permanently)");
 		return false;
 	}
 	
@@ -217,6 +273,14 @@ class MailStorageQueueThreads extends Thread
 		public PoisionedSerializedMail()
 		{
 			super(0, 0, null, null);
+		}
+	}
+	
+	private class JustPersistLookupDocument extends SerializedMail
+	{
+		public JustPersistLookupDocument(final int receiverID)
+		{
+			super(receiverID, 0, null, null);
 		}
 	}
 }

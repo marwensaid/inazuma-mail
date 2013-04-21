@@ -29,6 +29,11 @@ public class ReceiverLookupDocument
 		return true;
 	}
 	
+	public void remove(final String mailKey)
+	{
+		lookup.remove(mailKey);
+	}
+	
 	public int size()
 	{
 		return lookup.size();
