@@ -9,18 +9,18 @@ import com.couchbase.client.CouchbaseClient;
 public class MailStorageQueue
 {
 	private final int numberOfThreads;
-	private final MailStorageQueueThreads[] threads;
+	private final MailStorageQueueThread[] threads;
 	private final CountDownLatch latch;
 
 	public MailStorageQueue(final CouchbaseClient client, final int maxRetries, final int numberOfThreads)
 	{
 		this.numberOfThreads = numberOfThreads;
-		this.threads = new MailStorageQueueThreads[numberOfThreads];
+		this.threads = new MailStorageQueueThread[numberOfThreads];
 		this.latch = new CountDownLatch(numberOfThreads);
 		
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueThreads(this, i + 1, client, maxRetries);
+			threads[i] = new MailStorageQueueThread(this, i + 1, client, maxRetries);
 			threads[i].start();
 		}
 	}
