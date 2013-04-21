@@ -23,7 +23,7 @@ public class ConnectionManager
 		CouchbaseClient tmpClient = null;
 		try
 		{
-			// Use the "default" bucket with no password
+			// Use the "mail" bucket with no password
 			tmpClient = new CouchbaseClient(uris, "mail", "");
 		}
 		catch (IOException e)
