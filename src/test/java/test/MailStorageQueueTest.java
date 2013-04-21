@@ -81,7 +81,7 @@ public class MailStorageQueueTest
 	@Test
 	public void withoutErrors()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureTrue);
 
@@ -89,7 +89,7 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
 		verifyZeroInteractions(client);
@@ -98,7 +98,7 @@ public class MailStorageQueueTest
 	@Test
 	public void firstPersistMailFails()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureFalse).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureFalse).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureTrue);
 
@@ -106,7 +106,7 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client, times(2)).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client, times(2)).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
 		verifyZeroInteractions(client);
@@ -115,7 +115,7 @@ public class MailStorageQueueTest
 	@Test
 	public void firstPersistLookupFails()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureFalse).thenReturn(futureTrue);
 
@@ -123,7 +123,7 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client, times(2)).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
 		verifyZeroInteractions(client);
@@ -132,7 +132,7 @@ public class MailStorageQueueTest
 	@Test
 	public void secondPersistLookupFails()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureFalse).thenReturn(futureFalse).thenReturn(futureTrue);
 
@@ -140,7 +140,7 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client, times(3)).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
 		verifyZeroInteractions(client);
@@ -149,8 +149,8 @@ public class MailStorageQueueTest
 	@Test
 	public void firstPersistLookupFailsWithSecondMailOnQueueWithSameReceiver()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
-		when(client.add(mailDocumentKey2, 0, mailSerialized2.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey2, 0, mailSerialized2.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureFalse).thenReturn(futureTrue);
 
@@ -159,8 +159,8 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
-		verify(client).add(mailDocumentKey2, 0, mailSerialized2.getDocument());
+		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).set(mailDocumentKey2, 0, mailSerialized2.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client, times(2)).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
 		verifyZeroInteractions(client);
@@ -169,8 +169,8 @@ public class MailStorageQueueTest
 	@Test
 	public void firstPersistLookupFailsWithSecondMailOnQueueWithDifferentReceiver()
 	{
-		when(client.add(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
-		when(client.add(mailDocumentKey3, 0, mailSerialized3.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.set(mailDocumentKey3, 0, mailSerialized3.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.get(receiver2LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class))).thenReturn(futureFalse).thenReturn(futureTrue);
@@ -181,8 +181,8 @@ public class MailStorageQueueTest
 		mailStorageQueue.shutdown();
 		mailStorageQueue.awaitShutdown();
 
-		verify(client).add(mailDocumentKey1, 0, mailSerialized1.getDocument());
-		verify(client).add(mailDocumentKey3, 0, mailSerialized3.getDocument());
+		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).set(mailDocumentKey3, 0, mailSerialized3.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client).get(receiver2LookupDocumentKey);
 		verify(client, times(2)).set(eq(receiver1LookupDocumentKey), eq(0), isA(String.class));
