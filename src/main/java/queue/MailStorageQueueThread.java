@@ -60,7 +60,7 @@ class MailStorageQueueThread extends Thread
 						{
 							if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), lookupMap.get(receiverID)))
 							{
-								//System.err.println("Re-adding lookup document to queue for receiver " + receiverID);
+								//System.err.println("#" + threadNo + " Re-adding lookup document to queue for receiver " + receiverID);
 								incomingQueue.add(mail);
 							}
 						}
@@ -72,13 +72,13 @@ class MailStorageQueueThread extends Thread
 						{
 							if (!addMailToReceiverLookupDocument(mail))
 							{
-								//System.err.println("Adding lookup document to queue for receiver " + receiverID);
+								//System.err.println("#" + threadNo + " Adding lookup document to queue for receiver " + receiverID);
 								removeMailFromReceiverLookupDocument(mail);
 							}
 						}
 						else
 						{
-							//System.err.println("Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
+							//System.err.println("#" + threadNo + " Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
 							incomingQueue.add(mail);
 						}
 					}
@@ -91,7 +91,7 @@ class MailStorageQueueThread extends Thread
 		}
 		if (maxTriesUsed > (maxRetries / 2))
 		{
-			System.out.println("# " + threadNo + " Max tries used: " + maxTriesUsed);
+			System.out.println("#" + threadNo + " Max tries used: " + maxTriesUsed);
 		}
 		mailStorageQueue.countdown();
 	}
@@ -132,7 +132,7 @@ class MailStorageQueueThread extends Thread
 		// Modify lookup document
 		if (!mailReceiverLookup.add(mail.getCreated(), mail.getKey()))
 		{
-			System.err.println("Could not add mail with same key for mail " + mail.getKey());
+			System.err.println("#" + threadNo + " Could not add mail with same key for mail " + mail.getKey());
 			return false;
 		}
 		
@@ -177,13 +177,13 @@ class MailStorageQueueThread extends Thread
 			catch (Exception e)
 			{
 				retry = true;
-				System.err.println("Could not read lookup document for " + receiverID + ": " + e.getMessage());
+				System.err.println("#" + threadNo + " Could not read lookup document for " + receiverID + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
 		if (retry)
 		{
-			System.err.println("Could not read lookup document for " + receiverID + " (permanently)");
+			System.err.println("#" + threadNo + " Could not read lookup document for " + receiverID + " (permanently)");
 			return null;
 		}
 		else if (receiverLookupDocumentObject != null)
@@ -212,14 +212,14 @@ class MailStorageQueueThread extends Thread
 				if (lookupFuture.get())
 				{
 					receiverOnQueue.remove(receiverID);
-					printStatusMessage("Lookup document for receiver " + receiverID + " successfully saved", mailReceiverLookup);
+					printStatusMessage("#" + threadNo + " Lookup document for receiver " + receiverID + " successfully saved", mailReceiverLookup);
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
 				mailReceiverLookup.setLastException(e);
-				System.err.println("Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
+				System.err.println("#" + threadNo + " Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
@@ -242,14 +242,14 @@ class MailStorageQueueThread extends Thread
 				OperationFuture<Boolean> mailFuture = client.set("mail_" + mail.getKey(), 0, mail.getDocument());
 				if (mailFuture.get())
 				{
-					printStatusMessage("Mail mail_" + mail.getKey() + " successfully saved", mail);
+					printStatusMessage("#" + threadNo + " Mail mail_" + mail.getKey() + " successfully saved", mail);
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
 				mail.setLastException(e);
-				System.err.println("Could not add mail_" + mail.getKey() + " for receiver " + mail.getReceiverID() + ": " + e.getMessage());
+				System.err.println("#" + threadNo + " Could not add mail_" + mail.getKey() + " for receiver " + mail.getReceiverID() + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}

@@ -11,7 +11,7 @@ public class Config
 	public static final TimeUnit CREATION_TIMEUNIT = TimeUnit.MICROSECONDS;
 
 	public static final int STORAGE_THREADS = 50;
-	public static final int MAX_RETRIES = 10;
+	public static final int MAX_RETRIES = 100;
 	
 	public static final int MIN_USER = 1;
 	public static final int MAX_USER = 100000;

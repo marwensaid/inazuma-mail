@@ -12,7 +12,7 @@ public class MailStorageQueue
 	private final MailStorageQueueThread[] threads;
 	private final CountDownLatch latch;
 
-	public MailStorageQueue(final CouchbaseClient client, final int maxRetries, final int numberOfThreads)
+	public MailStorageQueue(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
 	{
 		this.numberOfThreads = numberOfThreads;
 		this.threads = new MailStorageQueueThread[numberOfThreads];
