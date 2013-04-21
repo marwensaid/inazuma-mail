@@ -24,7 +24,7 @@ public class Main
 		// Configure thread pools
 		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2, new NamedThreadFactory("ScheduledPool"));
 		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
-		threadPool.submit(new ClusterStatusJob(threadPool, client));
+		//threadPool.submit(new ClusterStatusJob(threadPool, client));
 
 		System.out.println("Creating mails for " + runtime + " ms...");
 		ScheduledExecutorService threadPoolCreation = Executors.newScheduledThreadPool(10, new NamedThreadFactory("MailCreation"));

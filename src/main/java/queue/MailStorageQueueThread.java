@@ -58,12 +58,10 @@ class MailStorageQueueThread extends Thread
 						// Persist lookup document
 						if (receiverOnQueue.contains(receiverID))
 						{
-							ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
-							if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), mailReceiverLookup))
+							if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), lookupMap.get(receiverID)))
 							{
-								System.err.println("Re-adding lookup document to queue for receiver " + receiverID);
+								//System.err.println("Re-adding lookup document to queue for receiver " + receiverID);
 								incomingQueue.add(mail);
-								threadSleep(RETRY_DELAY);
 							}
 						}
 					}
@@ -74,16 +72,14 @@ class MailStorageQueueThread extends Thread
 						{
 							if (!addMailToReceiverLookupDocument(mail))
 							{
-								System.err.println("Adding lookup document to queue for receiver " + receiverID);
+								//System.err.println("Adding lookup document to queue for receiver " + receiverID);
 								removeMailFromReceiverLookupDocument(mail);
-								threadSleep(RETRY_DELAY);
 							}
 						}
 						else
 						{
-							System.err.println("Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
+							//System.err.println("Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
 							incomingQueue.add(mail);
-							threadSleep(RETRY_DELAY);
 						}
 					}
 				}
@@ -114,11 +110,6 @@ class MailStorageQueueThread extends Thread
 	{
 		running.set(false);
 		incomingQueue.add(new PoisionedSerializedMail());
-	}
-	
-	private String createLookupDocumentKey(final int receiverID)
-	{
-		return "receiver_" + receiverID;
 	}
 	
 	private boolean addMailToReceiverLookupDocument(final SerializedMail mail)
@@ -155,7 +146,10 @@ class MailStorageQueueThread extends Thread
 		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
 
 		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
-		mailReceiverLookup.remove(lookupDocumentKey);
+		if (lookupMap != null)
+		{
+			mailReceiverLookup.remove(lookupDocumentKey);
+		}
 		
 		if (!receiverOnQueue.contains(receiverID))
 		{
@@ -218,16 +212,19 @@ class MailStorageQueueThread extends Thread
 				if (lookupFuture.get())
 				{
 					receiverOnQueue.remove(receiverID);
+					printStatusMessage("Lookup document for receiver " + receiverID + " successfully saved", mailReceiverLookup);
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
+				mailReceiverLookup.setLastException(e);
 				System.err.println("Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		//System.err.println("Could not set lookup document for receiver " + receiverID + " (permanently)");
+		mailReceiverLookup.incrementTries();
+		threadSleep(RETRY_DELAY);
 		return false;
 	}
 	
@@ -242,22 +239,50 @@ class MailStorageQueueThread extends Thread
 			}
 			try
 			{
-				OperationFuture<Boolean> mailFuture = client.add("mail_" + mail.getKey(), 0, mail.getDocument());
+				OperationFuture<Boolean> mailFuture = client.set("mail_" + mail.getKey(), 0, mail.getDocument());
 				if (mailFuture.get())
 				{
+					printStatusMessage("Mail mail_" + mail.getKey() + " successfully saved", mail);
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
-				System.err.println("Could not add mail for receiver " + mail.getReceiverID() + ": " + e.getMessage());
+				mail.setLastException(e);
+				System.err.println("Could not add mail_" + mail.getKey() + " for receiver " + mail.getReceiverID() + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		//System.err.println("Could not add mail for receiver " + mail.getReceiverID() + " (permanently)");
+		mail.incrementTries();
+		threadSleep(RETRY_DELAY);
 		return false;
 	}
 	
+	private String createLookupDocumentKey(final int receiverID)
+	{
+		return "receiver_" + receiverID;
+	}
+	
+	private void printStatusMessage(String statusMessage, final StatusMessageObject statusMessageObject)
+	{
+		Boolean showMessage = false;
+		if (statusMessageObject.getTries() > 0)
+		{
+			statusMessage += ", Tries: " + statusMessageObject.getTries();
+			showMessage = true;
+		}
+		if (statusMessageObject.getLastException() != null)
+		{
+			statusMessage += ", Last Exception " + statusMessageObject.getLastException().getMessage();
+			showMessage = true;
+		}
+		if (showMessage)
+		{
+			System.out.println(statusMessage);
+		}
+		statusMessageObject.resetStatus();
+	}
+
 	private void threadSleep(final long milliseconds)
 	{
 		try

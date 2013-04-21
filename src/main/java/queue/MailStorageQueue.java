@@ -59,7 +59,7 @@ public class MailStorageQueue
 			while ((System.nanoTime() - start) < limit)
 			{
 				int newSize = size();
-				if (lastSize > 0)
+				if (lastSize > -1)
 				{
 					int diff = newSize - lastSize;
 					System.out.println("Mail queue size: " + newSize + " (" + (diff > 0 ? "+" : "") + diff + ")");
