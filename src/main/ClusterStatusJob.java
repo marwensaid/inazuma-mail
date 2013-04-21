@@ -30,7 +30,7 @@ public class ClusterStatusJob implements Runnable
 		this.threadPool = threadPool;
 		this.client = client;
 	}
-
+	
 	@Override
 	public void run()
 	{

@@ -20,7 +20,7 @@ public class MailStorageQueue
 		
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueThreads(this, i, client, maxRetries);
+			threads[i] = new MailStorageQueueThreads(this, i + 1, client, maxRetries);
 			threads[i].start();
 		}
 	}

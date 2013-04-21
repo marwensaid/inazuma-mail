@@ -4,13 +4,12 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
 
-import queue.MailStorageQueue;
-import queue.SerializedMail;
-
 import mail.Mail;
 import mail.MailTrade;
-import mail.Types;
 import mail.MailUser;
+import mail.Types;
+import queue.MailStorageQueue;
+import queue.SerializedMail;
 
 import com.google.gson.Gson;
 
@@ -19,10 +18,10 @@ public class MailCreationJob implements Runnable
 	private static final Gson gson = new Gson();
 	private static final Types[] mailTypes = Types.values();
 	private static final Random generator = new Random();
-	
+
 	private final ScheduledExecutorService threadPool;
 	private final MailStorageQueue mailStorageQueue;
-	
+
 	public MailCreationJob(final ScheduledExecutorService threadPool, final MailStorageQueue mailStorageQueue)
 	{
 		this.threadPool = threadPool;
@@ -36,7 +35,7 @@ public class MailCreationJob implements Runnable
 		{
 			return;
 		}
-		
+
 		// Create random mail document
 		final int senderID = Config.MIN_USER + generator.nextInt(Config.MAX_USER);
 		final int receiverID = Config.MIN_USER + generator.nextInt(Config.MAX_USER);
@@ -62,10 +61,10 @@ public class MailCreationJob implements Runnable
 				break;
 			}
 		}
-		
+
 		// Put mail on storage queue
 		mailStorageQueue.addMail(new SerializedMail(receiverID, mail.getCreated(), mail.getKey(), gson.toJson(mail)));
-		
+
 		if (!threadPool.isShutdown() && !threadPool.isTerminated())
 		{
 			threadPool.schedule(this, Config.CREATION_DELAY, Config.CREATION_TIMEUNIT);

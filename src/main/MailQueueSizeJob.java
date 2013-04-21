@@ -15,7 +15,7 @@ public class MailQueueSizeJob implements Runnable
 		this.threadPool = threadPool;
 		this.mailStorageQueue = mailStorageQueue;
 	}
-
+	
 	@Override
 	public void run()
 	{

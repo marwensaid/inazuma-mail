@@ -27,6 +27,7 @@ class MailStorageQueueThreads extends Thread
 	
 	protected MailStorageQueueThreads(final MailStorageQueue mailStorageQueue, final int threadNo, final CouchbaseClient client, final int maxRetries)
 	{
+		super("MailStorageQueue-thread-" + threadNo);
 		this.incomingQueue = new LinkedBlockingQueue<SerializedMail>();
 		this.lookupMap = new IntObjectOpenHashMap<ReceiverLookupDocument>();
 		this.receiverOnQueue = new IntOpenHashSet();

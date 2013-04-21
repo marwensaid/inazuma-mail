@@ -21,14 +21,16 @@ public class Main
 		// Startup mail storage threads
 		MailStorageQueue mailStorageQueue = new MailStorageQueue(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
 		
-		// Configure thread pool
-		System.out.println("Creating mails for " + runtime + " ms...");
-		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(10);
+		// Configure thread pools
+		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2, new NamedThreadFactory("ScheduledPool"));
 		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
 		threadPool.submit(new ClusterStatusJob(threadPool, client));
+
+		System.out.println("Creating mails for " + runtime + " ms...");
+		ScheduledExecutorService threadPoolCreation = Executors.newScheduledThreadPool(10, new NamedThreadFactory("MailCreation"));
 		for (int i = 0; i < Config.CREATION_JOBS; ++i)
 		{
-			threadPool.submit(new MailCreationJob(threadPool, mailStorageQueue));
+			threadPoolCreation.submit(new MailCreationJob(threadPoolCreation, mailStorageQueue));
 		}
 		
 		// Wait until runtime is over
@@ -43,9 +45,11 @@ public class Main
 		// Shutdown of thread pool
 		System.out.println("Shutting down thread pool...");
 		threadPool.shutdown();
+		threadPoolCreation.shutdown();
 		try
 		{
 			threadPool.awaitTermination(60, TimeUnit.SECONDS);
+			threadPoolCreation.awaitTermination(60, TimeUnit.SECONDS);
 		}
 		catch (InterruptedException e)
 		{
