@@ -1,31 +1,32 @@
 package queue;
 
-import java.util.Map;
+import java.lang.reflect.Type;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 public class ReceiverLookupDocument implements StatusMessageObject
 {
-	final ConcurrentMap<String, Long> lookup = new ConcurrentHashMap<String, Long>();
+	private final static Type typeOfMap = new TypeToken<ConcurrentHashMap<String, Long>>() {}.getType();
 	
-	private int tries;
-	private Exception lastException;
+	private final ConcurrentMap<String, Long> lookup;
+	
+	private int tries = 0;
+	private Exception lastException = null;
 
 	public ReceiverLookupDocument()
 	{
-		tries = 0;
-		lastException = null;
+		lookup = new ConcurrentHashMap<String, Long>();
 	}
 	
-	private ReceiverLookupDocument(Map<String, Long> lookup)
+	public ReceiverLookupDocument(final String json)
 	{
-		this();
-		this.lookup.putAll(lookup);
+		lookup = new Gson().fromJson(json, typeOfMap);
 	}
-	
+
 	public boolean add(final long created, final String mailKey)
 	{
 		if (lookup.putIfAbsent(mailKey, created) != null)
@@ -56,11 +57,9 @@ public class ReceiverLookupDocument implements StatusMessageObject
 		return gson.toJson(lookup);
 	}
 
-	@SuppressWarnings("unchecked")
-	public static ReceiverLookupDocument fromJSON(String value)
+	public static ReceiverLookupDocument fromJSON(final String value)
 	{
-		Gson gson = new Gson();
-		return new ReceiverLookupDocument(gson.fromJson(value, Map.class));
+		return new ReceiverLookupDocument(value);
 	}
 	
 	@Override
