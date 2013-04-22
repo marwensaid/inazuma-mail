@@ -37,65 +37,6 @@ class MailStorageQueueThread extends Thread
 		this.maxRetries = maxRetries;
 	}
 
-	@Override
-	public void run()
-	{
-		while (running.get() || incomingQueue.size() > 0)
-		{
-			try
-			{
-				final SerializedMail mail = incomingQueue.take();
-				final int receiverID = mail.getReceiverID();
-				if (mail != null)
-				{
-					if (mail instanceof PoisionedSerializedMail)
-					{
-						// Do nothing
-						// This mail just unblocks the queue so the thread can shutdown properly
-					}
-					else if (mail instanceof JustPersistLookupDocument)
-					{
-						// Persist lookup document
-						if (receiverOnQueue.contains(receiverID))
-						{
-							if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), lookupMap.get(receiverID)))
-							{
-								//System.err.println("#" + threadNo + " Re-adding lookup document to queue for receiver " + receiverID);
-								incomingQueue.add(mail);
-							}
-						}
-					}
-					else
-					{
-						// Persist mail
-						if (persistMail(mail))
-						{
-							if (!addMailToReceiverLookupDocument(mail))
-							{
-								//System.err.println("#" + threadNo + " Adding lookup document to queue for receiver " + receiverID);
-								removeMailFromReceiverLookupDocument(mail);
-							}
-						}
-						else
-						{
-							//System.err.println("#" + threadNo + " Re-Adding mail to queue for receiver " + receiverID + ": mail_" + mail.getKey());
-							incomingQueue.add(mail);
-						}
-					}
-				}
-			}
-			catch (InterruptedException e)
-			{
-				System.err.println("Could not take mail from queue: " + e.getMessage());
-			}
-		}
-		if (maxTriesUsed > (maxRetries / 2))
-		{
-			System.out.println("#" + threadNo + " Max tries used: " + maxTriesUsed);
-		}
-		mailStorageQueue.countdown();
-	}
-	
 	protected void addMail(final SerializedMail mail)
 	{
 		incomingQueue.add(mail);
@@ -112,93 +53,122 @@ class MailStorageQueueThread extends Thread
 		incomingQueue.add(new PoisionedSerializedMail());
 	}
 	
-	private boolean addMailToReceiverLookupDocument(final SerializedMail mail)
+	@Override
+	public void run()
+	{
+		while (running.get() || incomingQueue.size() > 0)
+		{
+			try
+			{
+				final SerializedMail mail = incomingQueue.take();
+				final int receiverID = mail.getReceiverID();
+				if (mail instanceof PoisionedSerializedMail)
+				{
+					// Do nothing, this mail just unblocks the queue so the thread can shutdown properly
+				}
+				else if (mail instanceof PersistLookupDocumentOnly)
+				{
+					// Persist lookup document
+					if (receiverOnQueue.contains(receiverID))
+					{
+						if (!persistLookup(receiverID, createLookupDocumentKey(receiverID), lookupMap.get(receiverID)))
+						{
+							incomingQueue.add(mail);
+						}
+					}
+				}
+				else
+				{
+					// Persist mail
+					final ReceiverLookupDocument receiverLookupDocument = getLookup(receiverID);
+					if (receiverLookupDocument == null || !persistMail(mail))
+					{
+						incomingQueue.add(mail);
+					}
+					else if (!addMailToReceiverLookupDocument(mail, receiverLookupDocument))
+					{
+						removeMailFromReceiverLookupDocument(mail, receiverLookupDocument);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				System.err.println("Could not persist mail from queue: " + e.getMessage());
+			}
+		}
+		mailStorageQueue.countdown();
+	}
+	
+	private boolean addMailToReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
 	{
 		final int receiverID = mail.getReceiverID();
 		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
 
-		// Get lookup document
-		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
-		if (mailReceiverLookup == null)
-		{
-			mailReceiverLookup = getLookup(receiverID, lookupDocumentKey);
-			if (mailReceiverLookup == null)
-			{
-				return false;
-			}
-			lookupMap.put(receiverID, mailReceiverLookup);
-		}
-			
 		// Modify lookup document
-		if (!mailReceiverLookup.add(mail.getCreated(), mail.getKey()))
+		if (!receiverLookupDocument.add(mail.getCreated(), mail.getKey()))
 		{
 			System.err.println("#" + threadNo + " Could not add mail with same key for mail " + mail.getKey());
 			return false;
 		}
 		
 		// Store lookup document
-		return persistLookup(receiverID, lookupDocumentKey, mailReceiverLookup);
+		return persistLookup(receiverID, lookupDocumentKey, receiverLookupDocument);
 	}
 	
-	private void removeMailFromReceiverLookupDocument(final SerializedMail mail)
+	private void removeMailFromReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
 	{
 		final int receiverID = mail.getReceiverID();
 		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
-
-		ReceiverLookupDocument mailReceiverLookup = lookupMap.get(receiverID);
-		if (lookupMap != null)
-		{
-			mailReceiverLookup.remove(lookupDocumentKey);
-		}
 		
+		receiverLookupDocument.remove(lookupDocumentKey);
 		if (!receiverOnQueue.contains(receiverID))
 		{
 			receiverOnQueue.add(receiverID);
-			incomingQueue.add(new JustPersistLookupDocument(receiverID));
+			incomingQueue.add(new PersistLookupDocumentOnly(receiverID));
 		}
 	}
 	
-	private ReceiverLookupDocument getLookup(final int receiverID, final String lookupDocumentKey)
+	private ReceiverLookupDocument getLookup(final int receiverID)
 	{
-		Object receiverLookupDocumentObject = null;
-		boolean retry = true;
+		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
+		ReceiverLookupDocument receiverLookupDocument = lookupMap.get(receiverID);
+		if (receiverLookupDocument != null)
+		{
+			return receiverLookupDocument;
+		}
 		int tries = 0;
-		while (retry && tries++ < maxRetries)
+		while (tries++ < maxRetries)
 		{
 			if (tries > maxTriesUsed)
 			{
 				maxTriesUsed = tries;
 			}
-			retry = false;
 			try
 			{
-				receiverLookupDocumentObject = client.get(lookupDocumentKey);
+				final Object receiverLookupDocumentObject = client.get(lookupDocumentKey);
+				if (receiverLookupDocumentObject != null)
+				{
+					receiverLookupDocument = ReceiverLookupDocument.fromJSON((String)receiverLookupDocumentObject);
+				}
+				else
+				{
+					receiverLookupDocument = new ReceiverLookupDocument();
+				}
+				lookupMap.put(receiverID, receiverLookupDocument);
+				return receiverLookupDocument;
 			}
 			catch (Exception e)
 			{
-				retry = true;
 				System.err.println("#" + threadNo + " Could not read lookup document for " + receiverID + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		if (retry)
-		{
-			System.err.println("#" + threadNo + " Could not read lookup document for " + receiverID + " (permanently)");
-			return null;
-		}
-		else if (receiverLookupDocumentObject != null)
-		{
-			return ReceiverLookupDocument.fromJSON((String)receiverLookupDocumentObject);
-		}
-		else
-		{
-			return new ReceiverLookupDocument();
-		}
+		return null;
 	}
 	
-	private boolean persistLookup(final int receiverID, final String lookupDocumentKey, final ReceiverLookupDocument mailReceiverLookup)
+	private boolean persistLookup(final int receiverID, final String lookupDocumentKey, final ReceiverLookupDocument receiverLookupDocument)
 	{
-		final String document = mailReceiverLookup.toJSON();
+		final String document = receiverLookupDocument.toJSON();
 		int tries = 0;
 		while (tries++ < maxRetries)
 		{
@@ -212,18 +182,18 @@ class MailStorageQueueThread extends Thread
 				if (lookupFuture.get())
 				{
 					receiverOnQueue.remove(receiverID);
-					printStatusMessage("#" + threadNo + " Lookup document for receiver " + receiverID + " successfully saved", mailReceiverLookup);
+					printStatusMessage("#" + threadNo + " Lookup document for receiver " + receiverID + " successfully saved", receiverLookupDocument);
 					return true;
 				}
 			}
 			catch (Exception e)
 			{
-				mailReceiverLookup.setLastException(e);
+				receiverLookupDocument.setLastException(e);
 				System.err.println("#" + threadNo + " Could not set lookup document for receiver " + receiverID + ": " + e.getMessage());
 				threadSleep(tries * RETRY_DELAY);
 			}
 		}
-		mailReceiverLookup.incrementTries();
+		receiverLookupDocument.incrementTries();
 		threadSleep(RETRY_DELAY);
 		return false;
 	}
@@ -302,9 +272,9 @@ class MailStorageQueueThread extends Thread
 		}
 	}
 	
-	private class JustPersistLookupDocument extends SerializedMail
+	private class PersistLookupDocumentOnly extends SerializedMail
 	{
-		public JustPersistLookupDocument(final int receiverID)
+		public PersistLookupDocumentOnly(final int receiverID)
 		{
 			super(receiverID, 0, null, null);
 		}
