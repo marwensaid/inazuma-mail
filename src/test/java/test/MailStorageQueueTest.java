@@ -80,10 +80,6 @@ public class MailStorageQueueTest
 		mailSerialized3 = new SerializedMail(mail3.getReceiverID(), mail3.getCreated(), mail3.getKey(), gson.toJson(mail3));
 		mailDocumentKey3 = "mail_" + mailSerialized3.getKey();
 		
-		System.out.println(mailDocumentKey1);
-		System.out.println(mailDocumentKey2);
-		System.out.println(mailDocumentKey3);
-
 		receiver1LookupDocumentKey = "receiver_" + ANY_RECEIVER_1;
 		receiver2LookupDocumentKey = "receiver_" + ANY_RECEIVER_2;
 		
@@ -96,8 +92,6 @@ public class MailStorageQueueTest
 		receiverLookupDocument1And2.add(mailSerialized2.getCreated(), mailSerialized2.getKey());
 		receiverLookupDocument1And2JSON = receiverLookupDocument1And2.toJSON();
 		
-		System.out.println(receiverLookupDocument1And2JSON);
-
 		receiverLookupDocument3 = new ReceiverLookupDocument();
 		receiverLookupDocument3.add(mailSerialized3.getCreated(), mailSerialized3.getKey());
 		receiverLookupDocument3JSON = receiverLookupDocument3.toJSON();
