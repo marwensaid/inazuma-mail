@@ -16,8 +16,7 @@ public abstract class Mail
 		this.mailType = mailType;
 		this.senderID = senderID;
 		this.receiverID = receiverID;
-		this.created = System.nanoTime();
-		//System.out.println("Created mail_" + key);
+		this.created = System.currentTimeMillis() / 1000;
 	}
 	
 	public String getKey()
