@@ -3,7 +3,11 @@ package test;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import mail.MailUser;
 import net.spy.memcached.OperationTimeoutException;
@@ -47,10 +51,10 @@ public class MailStorageQueueTest
 
 	String receiver1LookupDocumentKey;
 	String receiver2LookupDocumentKey;
-	
+
 	ReceiverLookupDocument receiverLookupDocument1;
 	String receiverLookupDocument1JSON;
-	
+
 	ReceiverLookupDocument receiverLookupDocument1And2;
 	String receiverLookupDocument1And2JSON;
 
@@ -79,10 +83,10 @@ public class MailStorageQueueTest
 		mail3 = new MailUser(ANY_SENDER, ANY_RECEIVER_2, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
 		mailSerialized3 = new SerializedMail(mail3.getReceiverID(), mail3.getCreated(), mail3.getKey(), gson.toJson(mail3));
 		mailDocumentKey3 = "mail_" + mailSerialized3.getKey();
-		
+
 		receiver1LookupDocumentKey = "receiver_" + ANY_RECEIVER_1;
 		receiver2LookupDocumentKey = "receiver_" + ANY_RECEIVER_2;
-		
+
 		receiverLookupDocument1 = new ReceiverLookupDocument();
 		receiverLookupDocument1.add(mailSerialized1.getCreated(), mailSerialized1.getKey());
 		receiverLookupDocument1JSON = receiverLookupDocument1.toJSON();
@@ -91,7 +95,7 @@ public class MailStorageQueueTest
 		receiverLookupDocument1And2.add(mailSerialized1.getCreated(), mailSerialized1.getKey());
 		receiverLookupDocument1And2.add(mailSerialized2.getCreated(), mailSerialized2.getKey());
 		receiverLookupDocument1And2JSON = receiverLookupDocument1And2.toJSON();
-		
+
 		receiverLookupDocument3 = new ReceiverLookupDocument();
 		receiverLookupDocument3.add(mailSerialized3.getCreated(), mailSerialized3.getKey());
 		receiverLookupDocument3JSON = receiverLookupDocument3.toJSON();
@@ -118,7 +122,7 @@ public class MailStorageQueueTest
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
 	}
-	
+
 	@Test(timeOut = 1000)
 	public void addMailTwice()
 	{
@@ -169,7 +173,7 @@ public class MailStorageQueueTest
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
 	}
-	
+
 	@Test(timeOut = 1000)
 	public void persistLookupExcptionOnce()
 	{
@@ -186,7 +190,7 @@ public class MailStorageQueueTest
 		verify(client, times(2)).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
 	}
-	
+
 	@Test(timeOut = 1000)
 	public void persistLookupFailsOnce()
 	{
@@ -266,7 +270,7 @@ public class MailStorageQueueTest
 		verify(client).set(eq(receiver2LookupDocumentKey), eq(0), eq(receiverLookupDocument3JSON));
 		verifyZeroInteractions(client);
 	}
-	
+
 	@Test(timeOut = 1000)
 	public void getLookupDocumentExceptionOnce()
 	{
@@ -282,5 +286,36 @@ public class MailStorageQueueTest
 		verify(client, times(2)).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
+	}
+
+	@Test
+	public void shutdownAwaitLoop() throws InterruptedException, IllegalAccessException, NoSuchFieldException
+	{
+		final CountDownLatch latch = mock(CountDownLatch.class);
+		when(latch.getCount()).thenReturn(2L).thenReturn(1L).thenReturn(0L);
+		changePrivateFinalField(mailStorageQueue, "latch", latch);
+
+		MailStorageQueue queue = spy(mailStorageQueue);
+		when(queue.size()).thenReturn(5).thenReturn(10).thenReturn(0);
+
+		queue.shutdown();
+		queue.awaitShutdown();
+
+		verify(latch).countDown();
+		verify(latch, times(3)).await(anyLong(), any(TimeUnit.class));
+		verify(latch, times(3)).getCount();
+		verifyZeroInteractions(latch);
+	}
+
+	private void changePrivateFinalField(Object instance, String fieldName, Object newValue) throws IllegalAccessException, NoSuchFieldException
+	{
+		Field field = instance.getClass().getDeclaredField(fieldName);
+		Field modifiersField = Field.class.getDeclaredField("modifiers");
+
+		modifiersField.setAccessible(true);
+		modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+		field.setAccessible(true);
+		field.set(instance, newValue);
 	}
 }
