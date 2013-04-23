@@ -8,7 +8,7 @@ public class MailTrade extends Mail
 	
 	public MailTrade(final int senderID, final int receiverID, final List<Long> items)
 	{
-		super(Types.TRADE, senderID, receiverID);
+		super(MailType.TRADE, senderID, receiverID);
 		this.items = items;
 	}
 

@@ -107,7 +107,7 @@ public class MailStorageQueueTest
 	}
 
 	@Test(timeOut = 1000)
-	public void addMailOnce()
+	public void addFirstMail()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
@@ -124,7 +124,7 @@ public class MailStorageQueueTest
 	}
 
 	@Test(timeOut = 1000)
-	public void addMailTwice()
+	public void addSecondMail()
 	{
 		when(client.set(mailDocumentKey2, 0, mailSerialized2.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(receiverLookupDocument1JSON);
@@ -304,6 +304,20 @@ public class MailStorageQueueTest
 		verify(latch).countDown();
 		verify(latch, times(3)).await(anyLong(), any(TimeUnit.class));
 		verify(latch, times(3)).getCount();
+		verifyZeroInteractions(latch);
+	}
+	
+	@Test
+	public void shutdownAwaitLoopException() throws InterruptedException, IllegalAccessException, NoSuchFieldException
+	{
+		final CountDownLatch latch = mock(CountDownLatch.class);
+		when(latch.await(anyLong(), any(TimeUnit.class))).thenThrow(new InterruptedException());
+		changePrivateFinalField(mailStorageQueue, "latch", latch);
+
+		mailStorageQueue.shutdown();
+		mailStorageQueue.awaitShutdown();
+
+		verify(latch).await(anyLong(), any(TimeUnit.class));
 		verifyZeroInteractions(latch);
 	}
 

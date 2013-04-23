@@ -7,7 +7,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import mail.Mail;
 import mail.MailTrade;
 import mail.MailUser;
-import mail.Types;
+import mail.MailType;
 import queue.MailStorageQueue;
 import queue.SerializedMail;
 
@@ -16,7 +16,7 @@ import com.google.gson.Gson;
 public class MailCreationJob implements Runnable
 {
 	private static final Gson gson = new Gson();
-	private static final Types[] mailTypes = Types.values();
+	private static final MailType[] mailTypes = MailType.values();
 	private static final Random generator = new Random();
 
 	private final ScheduledExecutorService threadPool;
@@ -39,7 +39,7 @@ public class MailCreationJob implements Runnable
 		// Create random mail document
 		final int senderID = Config.MIN_USER + generator.nextInt(Config.MAX_USER);
 		final int receiverID = Config.MIN_USER + generator.nextInt(Config.MAX_USER);
-		final Types mailType = mailTypes[1 + generator.nextInt(mailTypes.length - 1)];
+		final MailType mailType = mailTypes[1 + generator.nextInt(mailTypes.length - 1)];
 		Mail mail = null;
 		switch (mailType)
 		{

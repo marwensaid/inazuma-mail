@@ -5,12 +5,12 @@ import java.util.UUID;
 public abstract class Mail
 {
 	protected final transient UUID key;
-	protected final Types mailType;
+	protected final MailType mailType;
 	protected final int senderID;
 	protected final int receiverID;
 	protected final long created;
 	
-	protected Mail(final Types mailType, final int senderID, final int receiverID)
+	protected Mail(final MailType mailType, final int senderID, final int receiverID)
 	{
 		this.key = UUID.randomUUID();
 		this.mailType = mailType;
@@ -24,7 +24,7 @@ public abstract class Mail
 		return key.toString();
 	}
 
-	public Types getMailType()
+	public MailType getMailType()
 	{
 		return mailType;
 	}

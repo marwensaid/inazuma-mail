@@ -7,7 +7,7 @@ public class MailUser extends Mail
 	
 	public MailUser(final int senderID, final int receiverID, final String subject, final String body)
 	{
-		super(Types.USER, senderID, receiverID);
+		super(MailType.USER, senderID, receiverID);
 		this.subject = subject;
 		this.body = body;
 	}

@@ -1,6 +1,6 @@
 package mail;
 
-public enum Types
+public enum MailType
 {
 	DEFAULT, USER, TRADE;
 }
