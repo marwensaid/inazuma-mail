@@ -3,16 +3,17 @@ package test;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.concurrent.CountDownLatch;
+import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
+import mail.MailTrade;
 import mail.MailUser;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.internal.OperationFuture;
 
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -23,7 +24,7 @@ import queue.SerializedMail;
 import com.couchbase.client.CouchbaseClient;
 import com.google.gson.Gson;
 
-public class MailStorageQueueTest
+public class MailStorageQueueTestAddMail
 {
 	private final static int ANY_SENDER = 10;
 	private final static int ANY_RECEIVER_1 = 20;
@@ -33,15 +34,16 @@ public class MailStorageQueueTest
 	private final static String ANY_BODY_TEXT = "Body text";
 
 	Gson gson;
+	Random generator;
+	
 	CouchbaseClient client;
-
 	MailStorageQueue mailStorageQueue;
 
 	MailUser mail1;
 	SerializedMail mailSerialized1;
 	String mailDocumentKey1;
 
-	MailUser mail2;
+	MailTrade mail2;
 	SerializedMail mailSerialized2;
 	String mailDocumentKey2;
 
@@ -61,22 +63,31 @@ public class MailStorageQueueTest
 	ReceiverLookupDocument receiverLookupDocument3;
 	String receiverLookupDocument3JSON;
 
+	@Mock
 	OperationFuture<Boolean> futureTrue;
+	@Mock
 	OperationFuture<Boolean> futureFalse;
 
 	@BeforeMethod
-	@SuppressWarnings("unchecked")
 	public void setUp() throws InterruptedException, ExecutionException
 	{
 		gson = new Gson();
+		generator = new Random();
+		
 		client = mock(CouchbaseClient.class);
 		mailStorageQueue = new MailStorageQueue(client, 1, 1);
 
 		mail1 = new MailUser(ANY_SENDER, ANY_RECEIVER_1, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
 		mailSerialized1 = new SerializedMail(mail1.getReceiverID(), mail1.getCreated(), mail1.getKey(), gson.toJson(mail1));
 		mailDocumentKey1 = "mail_" + mailSerialized1.getKey();
-
-		mail2 = new MailUser(ANY_SENDER, ANY_RECEIVER_1, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
+		
+		final ArrayList<Long> items = new ArrayList<Long>();
+		final int itemCount = 1 + generator.nextInt(5);
+		for (int i = 0; i < itemCount; ++i)
+		{
+			items.add(Math.abs(generator.nextLong()));
+		}
+		mail2 = new MailTrade(ANY_SENDER, ANY_RECEIVER_1, items);
 		mailSerialized2 = new SerializedMail(mail2.getReceiverID(), mail2.getCreated(), mail2.getKey(), gson.toJson(mail2));
 		mailDocumentKey2 = "mail_" + mailSerialized2.getKey();
 
@@ -100,9 +111,8 @@ public class MailStorageQueueTest
 		receiverLookupDocument3.add(mailSerialized3.getCreated(), mailSerialized3.getKey());
 		receiverLookupDocument3JSON = receiverLookupDocument3.toJSON();
 
-		futureTrue = mock(OperationFuture.class);
+		MockitoAnnotations.initMocks(this);
 		when(futureTrue.get()).thenReturn(true);
-		futureFalse = mock(OperationFuture.class);
 		when(futureFalse.get()).thenReturn(false);
 	}
 
@@ -137,6 +147,24 @@ public class MailStorageQueueTest
 		verify(client).set(mailDocumentKey2, 0, mailSerialized2.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1And2JSON));
+		verifyZeroInteractions(client);
+	}
+	
+	@Test(timeOut = 1000)
+	public void addSameMailTwice()
+	{
+		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
+		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
+		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
+
+		mailStorageQueue.addMail(mailSerialized1);
+		mailStorageQueue.addMail(mailSerialized1);
+		mailStorageQueue.shutdown();
+		mailStorageQueue.awaitShutdown();
+
+		verify(client, times(2)).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
+		verify(client).get(receiver1LookupDocumentKey);
+		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
 	}
 
@@ -286,50 +314,5 @@ public class MailStorageQueueTest
 		verify(client, times(2)).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
-	}
-
-	@Test
-	public void shutdownAwaitLoop() throws InterruptedException, IllegalAccessException, NoSuchFieldException
-	{
-		final CountDownLatch latch = mock(CountDownLatch.class);
-		when(latch.getCount()).thenReturn(2L).thenReturn(1L).thenReturn(0L);
-		changePrivateFinalField(mailStorageQueue, "latch", latch);
-
-		MailStorageQueue queue = spy(mailStorageQueue);
-		when(queue.size()).thenReturn(5).thenReturn(10).thenReturn(0);
-
-		queue.shutdown();
-		queue.awaitShutdown();
-
-		verify(latch).countDown();
-		verify(latch, times(3)).await(anyLong(), any(TimeUnit.class));
-		verify(latch, times(3)).getCount();
-		verifyZeroInteractions(latch);
-	}
-	
-	@Test
-	public void shutdownAwaitLoopException() throws InterruptedException, IllegalAccessException, NoSuchFieldException
-	{
-		final CountDownLatch latch = mock(CountDownLatch.class);
-		when(latch.await(anyLong(), any(TimeUnit.class))).thenThrow(new InterruptedException());
-		changePrivateFinalField(mailStorageQueue, "latch", latch);
-
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
-
-		verify(latch).await(anyLong(), any(TimeUnit.class));
-		verifyZeroInteractions(latch);
-	}
-
-	private void changePrivateFinalField(Object instance, String fieldName, Object newValue) throws IllegalAccessException, NoSuchFieldException
-	{
-		Field field = instance.getClass().getDeclaredField(fieldName);
-		Field modifiersField = Field.class.getDeclaredField("modifiers");
-
-		modifiersField.setAccessible(true);
-		modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-		field.setAccessible(true);
-		field.set(instance, newValue);
 	}
 }

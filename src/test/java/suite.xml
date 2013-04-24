@@ -2,7 +2,8 @@
 <suite name="Suite" parallel="false">
 	<test name="MailStorageQueue">
 		<classes>
-			<class name="test.MailStorageQueueTest" />
+			<class name="test.MailStorageQueueTestAddMail" />
+			<class name="test.MailStorageQueueTestShutdown" />
 		</classes>
 	</test>
 </suite>

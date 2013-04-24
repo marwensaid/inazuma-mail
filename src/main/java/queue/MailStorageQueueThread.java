@@ -96,14 +96,14 @@ class MailStorageQueueThread extends Thread
 			{
 				incomingQueue.add(mail);
 			}
-			else if (!addMailToReceiverLookupDocument(mail, receiverLookupDocument))
+			else
 			{
-				removeMailFromReceiverLookupDocument(mail, receiverLookupDocument);
+				addMailToReceiverLookupDocument(mail, receiverLookupDocument);
 			}
 		}
 	}
 	
-	private boolean addMailToReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
+	private void addMailToReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
 	{
 		final int receiverID = mail.getReceiverID();
 		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
@@ -112,11 +112,14 @@ class MailStorageQueueThread extends Thread
 		if (!receiverLookupDocument.add(mail.getCreated(), mail.getKey()))
 		{
 			System.err.println("#" + threadNo + " Could not add mail with same key for mail " + mail.getKey());
-			return false;
+			return;
 		}
 		
 		// Store lookup document
-		return persistLookup(receiverID, lookupDocumentKey, receiverLookupDocument);
+		if (!persistLookup(receiverID, lookupDocumentKey, receiverLookupDocument))
+		{
+			removeMailFromReceiverLookupDocument(mail, receiverLookupDocument);
+		}
 	}
 	
 	private void removeMailFromReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
