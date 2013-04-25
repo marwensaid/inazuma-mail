@@ -7,16 +7,18 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import queue.MailStorageQueue;
+import queue.MailStorageQueueSizeThread;
 
 import com.couchbase.client.CouchbaseClient;
 
-public class MailStorageQueueTestShutdown
+public class MailStorageQueueTest
 {
 	CouchbaseClient client;
 
@@ -28,22 +30,23 @@ public class MailStorageQueueTestShutdown
 		client = mock(CouchbaseClient.class);
 		mailStorageQueue = new MailStorageQueue(client, 1, 1);
 	}
-
+	
 	@Test
-	public void shutdownAwaitLoop() throws InterruptedException, IllegalAccessException, NoSuchFieldException
+	public void queueSize() throws InterruptedException
 	{
-		final CountDownLatch latch = mock(CountDownLatch.class);
-		when(latch.getCount()).thenReturn(2L).thenReturn(1L).thenReturn(0L);
-		changePrivateFinalField(mailStorageQueue, "latch", latch);
-
-		MailStorageQueue queue = spy(mailStorageQueue);
+		final ScheduledExecutorService threadPool = mock(ScheduledExecutorService.class);
+		final MailStorageQueue queue = spy(mailStorageQueue);
 		when(queue.size()).thenReturn(5).thenReturn(10).thenReturn(0);
-
-		queue.awaitShutdown();
 		
-		verify(latch, times(3)).await(anyLong(), any(TimeUnit.class));
-		verify(latch, times(3)).getCount();
-		verifyZeroInteractions(latch);
+		MailStorageQueueSizeThread queueSize = new MailStorageQueueSizeThread(threadPool, queue, 5L, TimeUnit.SECONDS);
+		queueSize.run();
+		queueSize.run();
+		queueSize.run();
+		
+		verify(threadPool, times(3)).schedule(any(MailStorageQueueSizeThread.class), eq(5L),eq(TimeUnit.SECONDS));
+		verifyZeroInteractions(threadPool);
+		verify(queue, times(3)).size();
+		verifyZeroInteractions(queue);
 	}
 	
 	@Test

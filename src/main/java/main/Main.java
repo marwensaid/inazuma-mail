@@ -5,9 +5,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import queue.MailStorageQueue;
+import util.NamedThreadFactory;
 
 import com.couchbase.client.CouchbaseClient;
-
 
 import database.ConnectionManager;
 
@@ -23,7 +23,6 @@ public class Main
 		
 		// Configure thread pools
 		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2, new NamedThreadFactory("ScheduledPool"));
-		threadPool.submit(new MailQueueSizeJob(threadPool, mailStorageQueue));
 		//threadPool.submit(new ClusterStatusJob(threadPool, client));
 
 		System.out.println("Creating mails for " + runtime + " ms...");

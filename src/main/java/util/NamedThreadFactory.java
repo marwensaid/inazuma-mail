@@ -1,4 +1,4 @@
-package main;
+package util;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.ThreadFactory;
@@ -21,17 +21,8 @@ public class NamedThreadFactory implements ThreadFactory
 	@Override
 	public Thread newThread(Runnable r)
 	{
-		Thread t = new Thread(group, r, namePrefix + "-thread-" + threadNumber.getAndIncrement(), 0);
-		if (t.isDaemon())
-		{
-			t.setDaemon(false);
-		}
-		if (t.getPriority() != Thread.NORM_PRIORITY)
-		{
-			t.setPriority(Thread.NORM_PRIORITY);
-		}
 		Thread.setDefaultUncaughtExceptionHandler(UNCAUGHT_EXCEPTION_HANDLER);
-		return t;
+		return new Thread(group, r, namePrefix + "-thread-" + threadNumber.getAndIncrement(), 0);
 	}
 
 	private static final class LastExceptionHandler implements UncaughtExceptionHandler

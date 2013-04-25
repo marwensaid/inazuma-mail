@@ -1,7 +1,12 @@
 package queue;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import util.NamedThreadFactory;
 
 
 import com.couchbase.client.CouchbaseClient;
@@ -9,18 +14,22 @@ import com.couchbase.client.CouchbaseClient;
 public class MailStorageQueue
 {
 	private final int numberOfThreads;
-	private final MailStorageQueueThread[] threads;
+	private final MailStorageQueueInsertThread[] threads;
 	private final CountDownLatch latch;
-
+	private final ScheduledExecutorService threadPool;
+	private final Future<?> queueSizeThread;
+	
 	public MailStorageQueue(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
 	{
 		this.numberOfThreads = numberOfThreads;
-		this.threads = new MailStorageQueueThread[numberOfThreads];
+		this.threads = new MailStorageQueueInsertThread[numberOfThreads];
 		this.latch = new CountDownLatch(numberOfThreads);
+		this.threadPool = Executors.newScheduledThreadPool(1, new NamedThreadFactory("MailStorageQueueSizeThread"));
 		
+		queueSizeThread = threadPool.submit(new MailStorageQueueSizeThread(threadPool, this, 5, TimeUnit.SECONDS));
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueThread(this, i + 1, client, maxRetries);
+			threads[i] = new MailStorageQueueInsertThread(this, i + 1, client, maxRetries);
 			threads[i].start();
 		}
 	}
@@ -53,28 +62,9 @@ public class MailStorageQueue
 	{
 		try
 		{
-			final long start = System.nanoTime();
-			final long limit = TimeUnit.MINUTES.toNanos(60);
-			int lastSize = -1;
-			while ((System.nanoTime() - start) < limit)
-			{
-				int newSize = size();
-				if (lastSize > -1)
-				{
-					int diff = newSize - lastSize;
-					System.out.println("Mail queue size: " + newSize + " (" + (diff > 0 ? "+" : "") + diff + ")");
-				}
-				else
-				{
-					System.out.println("Mail queue size: " + newSize);
-				}
-				lastSize = newSize;
-				latch.await(5, TimeUnit.SECONDS);
-				if (latch.getCount() == 0)
-				{
-					return;
-				}
-			}
+			latch.await(60, TimeUnit.MINUTES);
+			queueSizeThread.cancel(true);
+			threadPool.shutdown();
 		}
 		catch (InterruptedException e)
 		{
