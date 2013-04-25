@@ -11,6 +11,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.7</maven.compiler.source>
 		<maven.compiler.target>1.7</maven.compiler.target>
+		<powermock.version>1.5</powermock.version>
 	</properties>
 
 	<dependencies>
@@ -50,6 +51,19 @@
 			<version>0.6.3-SNAPSHOT</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-testng</artifactId>
+			<version>${powermock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito</artifactId>
+			<version>${powermock.version}</version>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 
 	<repositories>
@@ -124,14 +138,14 @@
 						</goals>
 						<configuration>
 							<check>
-							<!-- 
-								<classRatio>100</classRatio>
-								<instructionRatio>90</instructionRatio>
-								<methodRatio>95</methodRatio>
-								<branchRatio>85</branchRatio>
-								<complexityRatio>85</complexityRatio>
-								<lineRatio>90</lineRatio>
-							-->
+								<!--
+									<classRatio>100</classRatio>
+									<instructionRatio>90</instructionRatio>
+									<methodRatio>95</methodRatio>
+									<branchRatio>85</branchRatio>
+									<complexityRatio>85</complexityRatio>
+									<lineRatio>90</lineRatio>
+								-->
 							</check>
 						</configuration>
 					</execution>
