@@ -1,4 +1,4 @@
-package queue;
+package mailstorage;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -7,13 +7,13 @@ import java.util.concurrent.TimeUnit;
 public class MailStorageQueueSizeThread implements Runnable
 {
 	private final ScheduledExecutorService threadPool;
-	private final MailStorageQueue mailStorageQueue;
+	private final MailStorage mailStorageQueue;
 	private final long delay;
 	private final TimeUnit timeUnit;
 	
 	private int lastSize = 0;
 	
-	public MailStorageQueueSizeThread(final ScheduledExecutorService threadPool, final MailStorageQueue mailStorageQueue, final long delay, final TimeUnit timeUnit)
+	public MailStorageQueueSizeThread(final ScheduledExecutorService threadPool, final MailStorage mailStorageQueue, final long delay, final TimeUnit timeUnit)
 	{
 		this.threadPool = threadPool;
 		this.mailStorageQueue = mailStorageQueue;

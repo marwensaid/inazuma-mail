@@ -2,8 +2,8 @@ package main;
 
 import java.util.Map;
 
+import mailstorage.ReceiverLookupDocument;
 import net.spy.memcached.internal.OperationFuture;
-import queue.ReceiverLookupDocument;
 
 import com.couchbase.client.CouchbaseClient;
 
@@ -14,7 +14,7 @@ public class MailCheckJob implements Runnable
 	@Override
 	public void run()
 	{
-		final CouchbaseClient client = ConnectionManager.getConnection();
+		final CouchbaseClient client = null;
 		
 		System.out.println("Checking lookup documents and mails...");
 		

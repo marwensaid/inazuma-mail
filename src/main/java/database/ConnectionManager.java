@@ -6,13 +6,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PreDestroy;
+import javax.ejb.Singleton;
+
 import com.couchbase.client.CouchbaseClient;
 
+@Singleton
 public class ConnectionManager
 {
-	private static final CouchbaseClient client;
+	private final CouchbaseClient client;
 	
-	static
+	public ConnectionManager()
 	{
 		// Set the URIs and get a client
 		List<URI> uris = new LinkedList<URI>();
@@ -37,12 +41,13 @@ public class ConnectionManager
 		}
 	}
 	
-	public static final CouchbaseClient getConnection()
+	public final CouchbaseClient getConnection()
 	{
 		return client;
 	}
 	
-	public static final void shutdown()
+	@PreDestroy
+	public final void shutdown()
 	{
 		client.shutdown(60, TimeUnit.SECONDS);
 	}

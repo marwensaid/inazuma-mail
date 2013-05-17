@@ -1,4 +1,4 @@
-package queue;
+package mailstorage;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -8,30 +8,37 @@ import java.util.concurrent.TimeUnit;
 
 import util.NamedThreadFactory;
 
-
 import com.couchbase.client.CouchbaseClient;
 
-public class MailStorageQueue
+public class MailStorage
 {
+	private final CouchbaseClient client;
 	private final int numberOfThreads;
-	private final MailStorageQueueInsertThread[] threads;
+	private final MailStorageQueueThread[] threads;
 	private final CountDownLatch latch;
 	private final ScheduledExecutorService threadPool;
 	private final Future<?> queueSizeThread;
 	
-	public MailStorageQueue(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
+	public MailStorage(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
 	{
+		this.client = client;
 		this.numberOfThreads = numberOfThreads;
-		this.threads = new MailStorageQueueInsertThread[numberOfThreads];
+		this.threads = new MailStorageQueueThread[numberOfThreads];
 		this.latch = new CountDownLatch(numberOfThreads);
 		this.threadPool = Executors.newScheduledThreadPool(1, new NamedThreadFactory("MailStorageQueueSizeThread"));
 		
 		queueSizeThread = threadPool.submit(new MailStorageQueueSizeThread(threadPool, this, 5, TimeUnit.SECONDS));
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueInsertThread(this, i + 1, client, maxRetries);
+			threads[i] = new MailStorageQueueThread(this, i + 1, client, maxRetries);
 			threads[i].start();
 		}
+	}
+	
+	public String getMail(String mailKey)
+	{
+		// TODO: Add exception handling
+		return String.valueOf(client.get("mail_" + mailKey));
 	}
 	
 	public void addMail(SerializedMail mail)

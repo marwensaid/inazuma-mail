@@ -9,6 +9,9 @@ import java.util.concurrent.ExecutionException;
 
 import mail.MailTrade;
 import mail.MailUser;
+import mailstorage.MailStorage;
+import mailstorage.ReceiverLookupDocument;
+import mailstorage.SerializedMail;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.internal.OperationFuture;
 
@@ -17,9 +20,6 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import queue.MailStorageQueue;
-import queue.ReceiverLookupDocument;
-import queue.SerializedMail;
 
 import com.couchbase.client.CouchbaseClient;
 import com.google.gson.Gson;
@@ -37,7 +37,7 @@ public class MailStorageQueueTestAddMail
 	Random generator;
 	
 	CouchbaseClient client;
-	MailStorageQueue mailStorageQueue;
+	MailStorage mailStorageQueue;
 
 	MailUser mail1;
 	SerializedMail mailSerialized1;
@@ -75,7 +75,7 @@ public class MailStorageQueueTestAddMail
 		generator = new Random();
 		
 		client = mock(CouchbaseClient.class);
-		mailStorageQueue = new MailStorageQueue(client, 1, 1);
+		mailStorageQueue = new MailStorage(client, 1, 1);
 
 		mail1 = new MailUser(ANY_SENDER, ANY_RECEIVER_1, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
 		mailSerialized1 = new SerializedMail(mail1.getReceiverID(), mail1.getCreated(), mail1.getKey(), gson.toJson(mail1));

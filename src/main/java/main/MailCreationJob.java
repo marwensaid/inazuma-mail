@@ -8,8 +8,8 @@ import mail.Mail;
 import mail.MailTrade;
 import mail.MailUser;
 import mail.MailType;
-import queue.MailStorageQueue;
-import queue.SerializedMail;
+import mailstorage.MailStorage;
+import mailstorage.SerializedMail;
 
 import com.google.gson.Gson;
 
@@ -20,9 +20,9 @@ public class MailCreationJob implements Runnable
 	private static final Random generator = new Random();
 
 	private final ScheduledExecutorService threadPool;
-	private final MailStorageQueue mailStorageQueue;
+	private final MailStorage mailStorageQueue;
 
-	public MailCreationJob(final ScheduledExecutorService threadPool, final MailStorageQueue mailStorageQueue)
+	public MailCreationJob(final ScheduledExecutorService threadPool, final MailStorage mailStorageQueue)
 	{
 		this.threadPool = threadPool;
 		this.mailStorageQueue = mailStorageQueue;

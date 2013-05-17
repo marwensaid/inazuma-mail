@@ -6,6 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Inazuma-Mail</name>
 	<description>Inazuma-Mail is a fast mailservice implementation based on Couchbase</description>
+	<packaging>war</packaging>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,7 +20,6 @@
 			<groupId>couchbase</groupId>
 			<artifactId>couchbase-client</artifactId>
 			<version>1.1.4</version>
-			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
@@ -30,6 +30,15 @@
 			<groupId>com.carrotsearch</groupId>
 			<artifactId>hppc</artifactId>
 			<version>0.4.3</version>
+		</dependency>
+
+		<!-- jboss -->
+		<dependency>
+			<groupId>org.jboss.spec</groupId>
+			<artifactId>jboss-javaee-6.0</artifactId>
+			<version>1.0.0.Final</version>
+			<scope>provided</scope>
+			<type>pom</type>
 		</dependency>
 
 		<!-- test dependencies -->
@@ -112,7 +121,17 @@
 	</pluginRepositories>
 
 	<build>
+		<finalName>${project.artifactId}</finalName>
+
 		<plugins>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<!-- Java EE 6 doesn't require web.xml, Maven needs to catch up! -->
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>

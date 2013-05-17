@@ -4,7 +4,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import queue.MailStorageQueue;
+import mailstorage.MailStorage;
+
 import util.NamedThreadFactory;
 
 import com.couchbase.client.CouchbaseClient;
@@ -13,13 +14,14 @@ import database.ConnectionManager;
 
 public class Main
 {
+	/*
 	public static void main(String[] args)
 	{
 		final long runtime = Config.RUNTIME;
 		final CouchbaseClient client = ConnectionManager.getConnection();
 
 		// Startup mail storage threads
-		MailStorageQueue mailStorageQueue = new MailStorageQueue(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
+		MailStorage mailStorageQueue = new MailStorage(client, Config.STORAGE_THREADS, Config.MAX_RETRIES);
 		
 		// Configure thread pools
 		ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2, new NamedThreadFactory("ScheduledPool"));
@@ -71,4 +73,5 @@ public class Main
 		ConnectionManager.shutdown();
 		System.out.println("Done!\n");
 	}
+	*/
 }

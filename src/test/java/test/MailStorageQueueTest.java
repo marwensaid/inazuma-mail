@@ -7,12 +7,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import mailstorage.MailStorage;
+import mailstorage.MailStorageQueueSizeThread;
+
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import queue.MailStorageQueue;
-import queue.MailStorageQueueSizeThread;
 
 import com.couchbase.client.CouchbaseClient;
 
@@ -20,21 +21,21 @@ public class MailStorageQueueTest
 {
 	CouchbaseClient client;
 
-	MailStorageQueue mailStorageQueue;
+	MailStorage mailStorageQueue;
 
 	@BeforeMethod
 	public void setUp()
 	{
 		client = mock(CouchbaseClient.class);
 
-		mailStorageQueue = new MailStorageQueue(client, 1, 1);
+		mailStorageQueue = new MailStorage(client, 1, 1);
 	}
 
 	@Test
 	public void queueSize() throws InterruptedException
 	{
 		final ScheduledExecutorService threadPool = mock(ScheduledExecutorService.class);
-		final MailStorageQueue queue = spy(mailStorageQueue);
+		final MailStorage queue = spy(mailStorageQueue);
 		when(queue.size()).thenReturn(5).thenReturn(10).thenReturn(0);
 
 		MailStorageQueueSizeThread queueSize = new MailStorageQueueSizeThread(threadPool, queue, 5L, TimeUnit.SECONDS);
