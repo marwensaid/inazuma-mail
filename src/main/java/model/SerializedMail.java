@@ -1,4 +1,4 @@
-package mailstorage;
+package model;
 
 public class SerializedMail implements StatusMessageObject
 {

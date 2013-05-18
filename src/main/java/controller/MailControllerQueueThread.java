@@ -1,9 +1,12 @@
-package mailstorage;
+package controller;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import model.ReceiverLookupDocument;
+import model.SerializedMail;
+import model.StatusMessageObject;
 import net.spy.memcached.internal.OperationFuture;
 
 import com.carrotsearch.hppc.IntObjectOpenHashMap;

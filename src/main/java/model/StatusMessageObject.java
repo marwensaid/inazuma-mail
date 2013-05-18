@@ -1,6 +1,6 @@
-package mailstorage;
+package model;
 
-interface StatusMessageObject
+public interface StatusMessageObject
 {
 	public int getTries();
 

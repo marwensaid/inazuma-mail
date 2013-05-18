@@ -7,8 +7,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import mailstorage.MailController;
-import mailstorage.MailControllerQueueSizeThread;
 
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeMethod;
@@ -17,7 +15,10 @@ import org.testng.annotations.Test;
 
 import com.couchbase.client.CouchbaseClient;
 
-public class MailStorageQueueTest
+import controller.MailController;
+import controller.MailControllerQueueSizeThread;
+
+public class MailControllerTest
 {
 	CouchbaseClient client;
 

@@ -18,8 +18,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import mailstorage.MailController;
-import mailstorage.SerializedMail;
+import model.SerializedMail;
+
+import controller.MailController;
+
 import database.ConnectionManager;
 
 @Path("/")

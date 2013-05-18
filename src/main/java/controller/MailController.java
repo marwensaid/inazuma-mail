@@ -1,10 +1,12 @@
-package mailstorage;
+package controller;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import model.SerializedMail;
 
 import util.NamedThreadFactory;
 

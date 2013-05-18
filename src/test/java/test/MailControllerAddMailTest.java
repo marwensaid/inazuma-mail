@@ -7,9 +7,8 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-import mailstorage.MailController;
-import mailstorage.ReceiverLookupDocument;
-import mailstorage.SerializedMail;
+import model.ReceiverLookupDocument;
+import model.SerializedMail;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.internal.OperationFuture;
 
@@ -20,7 +19,9 @@ import org.testng.annotations.Test;
 
 import com.couchbase.client.CouchbaseClient;
 
-public class MailStorageQueueTestAddMail
+import controller.MailController;
+
+public class MailControllerAddMailTest
 {
 	private final static int ANY_RECEIVER_1 = 20;
 	private final static int ANY_RECEIVER_2 = 30;
