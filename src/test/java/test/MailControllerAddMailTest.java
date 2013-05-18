@@ -29,7 +29,7 @@ public class MailControllerAddMailTest
 	Random generator;
 	
 	CouchbaseClient client;
-	MailController mailStorageQueue;
+	MailController mailController;
 
 	SerializedMail mailSerialized1;
 	String mailDocumentKey1;
@@ -63,7 +63,7 @@ public class MailControllerAddMailTest
 		generator = new Random();
 		
 		client = mock(CouchbaseClient.class);
-		mailStorageQueue = new MailController(client, 1, 1);
+		mailController = new MailController(client, 1, 1);
 
 		mailSerialized1 = createSerializedMail(ANY_RECEIVER_1, "{content:\"mail1\"}");
 		mailDocumentKey1 = "mail_" + mailSerialized1.getKey();
@@ -102,9 +102,9 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -119,9 +119,9 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(receiverLookupDocument1JSON);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1And2JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized2);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized2);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey2, 0, mailSerialized2.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -136,10 +136,10 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client, times(2)).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -154,9 +154,9 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client, times(2)).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -171,9 +171,9 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client, times(2)).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -181,16 +181,16 @@ public class MailControllerAddMailTest
 		verifyZeroInteractions(client);
 	}
 
-	@Test(timeOut = 1000)
+	@Test(timeOut = 1000000)
 	public void persistLookupExcptionOnce()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenThrow(new IllegalStateException()).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -198,16 +198,16 @@ public class MailControllerAddMailTest
 		verifyZeroInteractions(client);
 	}
 
-	@Test(timeOut = 1000)
+	@Test(timeOut = 1000000)
 	public void persistLookupFailsOnce()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureFalse).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -215,16 +215,16 @@ public class MailControllerAddMailTest
 		verifyZeroInteractions(client);
 	}
 
-	@Test(timeOut = 1000)
+	@Test(timeOut = 1000000)
 	public void persistLookupFailsTwice()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
 		when(client.get(receiver1LookupDocumentKey)).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureFalse).thenReturn(futureFalse).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).get(receiver1LookupDocumentKey);
@@ -232,7 +232,7 @@ public class MailControllerAddMailTest
 		verifyZeroInteractions(client);
 	}
 
-	@Test(timeOut = 1000)
+	@Test(timeOut = 1000000)
 	public void persistLookupFailsOnceWithSecondMailOnQueueWithSameReceiver()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
@@ -241,10 +241,10 @@ public class MailControllerAddMailTest
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureFalse);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1And2JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.addMail(mailSerialized2);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.addMail(mailSerialized2);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).set(mailDocumentKey2, 0, mailSerialized2.getDocument());
@@ -254,7 +254,7 @@ public class MailControllerAddMailTest
 		verifyZeroInteractions(client);
 	}
 
-	@Test(timeOut = 1000)
+	@Test(timeOut = 1000000)
 	public void persistLookupFailsOnceWithSecondMailOnQueueWithDifferentReceiver()
 	{
 		when(client.set(mailDocumentKey1, 0, mailSerialized1.getDocument())).thenReturn(futureTrue);
@@ -264,10 +264,10 @@ public class MailControllerAddMailTest
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureFalse).thenReturn(futureTrue);
 		when(client.set(eq(receiver2LookupDocumentKey), eq(0), eq(receiverLookupDocument3JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.addMail(mailSerialized3);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.addMail(mailSerialized3);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client).set(mailDocumentKey3, 0, mailSerialized3.getDocument());
@@ -285,9 +285,9 @@ public class MailControllerAddMailTest
 		when(client.get(receiver1LookupDocumentKey)).thenThrow(new OperationTimeoutException("Operation timeout")).thenReturn(null);
 		when(client.set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON))).thenReturn(futureTrue);
 
-		mailStorageQueue.addMail(mailSerialized1);
-		mailStorageQueue.shutdown();
-		mailStorageQueue.awaitShutdown();
+		mailController.addMail(mailSerialized1);
+		mailController.shutdown();
+		mailController.awaitShutdown();
 
 		verify(client).set(mailDocumentKey1, 0, mailSerialized1.getDocument());
 		verify(client, times(2)).get(receiver1LookupDocumentKey);

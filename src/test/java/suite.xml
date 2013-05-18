@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <suite name="Suite" parallel="false">
-	<test name="MailStorageQueue">
+	<test name="MailController">
 		<classes>
-			<class name="test.MailStorageQueueTest" />
-			<class name="test.MailStorageQueueTestAddMail" />
+			<class name="test.MailControllerAddMailTest" />
+			<class name="test.MailControllerTest" />
 		</classes>
 	</test>
 </suite>

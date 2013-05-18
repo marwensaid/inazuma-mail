@@ -19,26 +19,24 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import model.SerializedMail;
-
 import controller.MailController;
-
 import database.ConnectionManager;
 
-@Path("/")
 @Startup
 @Singleton
+@Path("/")
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 public class MailService
 {
-	private MailController mailStorage;
+	private MailController mailController;
 	
 	@EJB
 	private ConnectionManager connectionManager;
-
+	
 	@PostConstruct
 	protected void init()
 	{
-		mailStorage = new MailController(connectionManager.getConnection(), 10, 5);
+		mailController = new MailController(connectionManager.getConnection(), 10, 5);
 	}
 	
 	@GET
@@ -54,7 +52,7 @@ public class MailService
 	@Produces(MediaType.APPLICATION_JSON)
 	public String getMailKeys(@PathParam("receiverID") int receiverID)
 	{
-		return mailStorage.getMailKeys(receiverID);
+		return mailController.getMailKeys(receiverID);
 	}
 
 	@GET
@@ -62,7 +60,7 @@ public class MailService
 	@Produces(MediaType.APPLICATION_JSON)
 	public String getMail(@PathParam("mailKey") String mailKey)
 	{
-		return mailStorage.getMail(mailKey);
+		return mailController.getMail(mailKey);
 	}
 	
 	@POST
@@ -72,7 +70,7 @@ public class MailService
 	public String putMail(@PathParam("receiverID") int receiverID, @FormParam("document") String document)
 	{
 		final SerializedMail serializedMail = new SerializedMail(receiverID, System.currentTimeMillis() / 1000, UUID.randomUUID().toString(), document);
-		mailStorage.addMail(serializedMail);
+		mailController.addMail(serializedMail);
 		return serializedMail.getKey();
 	}
 
@@ -81,6 +79,6 @@ public class MailService
 	@Produces(MediaType.APPLICATION_JSON)
 	public void deleteMail(@PathParam("receiverID") int receiverID, @PathParam("mailKey") String mailKey)
 	{
-		mailStorage.deleteMail(receiverID, mailKey);
+		mailController.deleteMail(receiverID, mailKey);
 	}
 }
