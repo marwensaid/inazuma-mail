@@ -9,6 +9,7 @@ import javax.ejb.EJB;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -47,6 +48,14 @@ public class MailService
 	}
 
 	@GET
+	@Path("/mails/{receiverID}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String getMailKeys(@PathParam("receiverID") int receiverID)
+	{
+		return mailStorage.getMailKeys(receiverID);
+	}
+
+	@GET
 	@Path("/mail/{mailKey}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public String getMail(@PathParam("mailKey") String mailKey)
@@ -63,5 +72,13 @@ public class MailService
 		final SerializedMail serializedMail = new SerializedMail(receiverID, System.currentTimeMillis() / 1000, UUID.randomUUID().toString(), document);
 		mailStorage.addMail(serializedMail);
 		return serializedMail.getKey();
+	}
+
+	@DELETE
+	@Path("/mail/{receiverID}/{mailKey}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public void deleteMail(@PathParam("receiverID") int receiverID, @PathParam("mailKey") String mailKey)
+	{
+		mailStorage.deleteMail(receiverID, mailKey);
 	}
 }

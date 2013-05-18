@@ -35,16 +35,25 @@ public class MailStorage
 		}
 	}
 	
-	public String getMail(String mailKey)
+	public String getMailKeys(final int receiverID)
+	{
+		return threads[receiverID].getMailKeys(receiverID);
+	}
+
+	public String getMail(final String mailKey)
 	{
 		// TODO: Add exception handling
 		return String.valueOf(client.get("mail_" + mailKey));
 	}
 	
-	public void addMail(SerializedMail mail)
+	public void addMail(final SerializedMail mail)
 	{
-		final int threadNumber = mail.getReceiverID() % numberOfThreads;
-		threads[threadNumber].addMail(mail);
+		threads[calculateThreadNumber(mail.getReceiverID())].addMail(mail);
+	}
+	
+	public void deleteMail(final int receiverID, final String mailKey)
+	{
+		threads[calculateThreadNumber(receiverID)].deleteMail(receiverID, mailKey);
 	}
 	
 	public int size()
@@ -81,5 +90,10 @@ public class MailStorage
 	protected void countdown()
 	{
 		latch.countDown();
+	}
+	
+	private int calculateThreadNumber(final int receiverID)
+	{
+		return receiverID % numberOfThreads;
 	}
 }

@@ -40,6 +40,17 @@ class MailStorageQueueThread extends Thread
 		incomingQueue.add(mail);
 	}
 	
+	protected void deleteMail(final int receiverID, final String mailKey)
+	{
+		incomingQueue.add(new DeleteMail(receiverID, mailKey));
+	}
+
+	protected String getMailKeys(final int receiverID)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	protected int size()
 	{
 		return incomingQueue.size();
@@ -88,6 +99,19 @@ class MailStorageQueueThread extends Thread
 				}
 			}
 		}
+		else if (mail instanceof DeleteMail)
+		{
+			// Delete mail
+			final ReceiverLookupDocument receiverLookupDocument = getLookup(receiverID);
+			if (receiverLookupDocument == null || !deleteMail(mail))
+			{
+				incomingQueue.add(mail);
+			}
+			else
+			{
+				removeMailFromReceiverLookupDocument(mail, receiverLookupDocument);
+			}
+		}
 		else
 		{
 			// Persist mail
@@ -125,9 +149,8 @@ class MailStorageQueueThread extends Thread
 	private void removeMailFromReceiverLookupDocument(final SerializedMail mail, final ReceiverLookupDocument receiverLookupDocument)
 	{
 		final int receiverID = mail.getReceiverID();
-		final String lookupDocumentKey = createLookupDocumentKey(receiverID);
 		
-		receiverLookupDocument.remove(lookupDocumentKey);
+		receiverLookupDocument.remove("mail_" + receiverID);
 		if (!receiverOnQueue.contains(receiverID))
 		{
 			receiverOnQueue.add(receiverID);
@@ -223,6 +246,12 @@ class MailStorageQueueThread extends Thread
 		return false;
 	}
 	
+	private boolean deleteMail(final SerializedMail mail)
+	{
+		// TODO implement delete funtionality
+		return false;
+	}
+
 	private String createLookupDocumentKey(final int receiverID)
 	{
 		return "receiver_" + receiverID;
@@ -272,6 +301,14 @@ class MailStorageQueueThread extends Thread
 		public PersistLookupDocumentOnly(final int receiverID)
 		{
 			super(receiverID, 0, null, null);
+		}
+	}
+	
+	private class DeleteMail extends SerializedMail
+	{
+		public DeleteMail(final int receiverID, final String mailKey)
+		{
+			super(receiverID, 0, mailKey, null);
 		}
 	}
 }
