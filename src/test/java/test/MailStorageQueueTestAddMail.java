@@ -3,12 +3,10 @@ package test;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
-import java.util.ArrayList;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-import mail.MailTrade;
-import mail.MailUser;
 import mailstorage.MailStorage;
 import mailstorage.ReceiverLookupDocument;
 import mailstorage.SerializedMail;
@@ -20,34 +18,24 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-
 import com.couchbase.client.CouchbaseClient;
-import com.google.gson.Gson;
 
 public class MailStorageQueueTestAddMail
 {
-	private final static int ANY_SENDER = 10;
 	private final static int ANY_RECEIVER_1 = 20;
 	private final static int ANY_RECEIVER_2 = 30;
 
-	private final static String ANY_SUBJECT_TEXT = "Subject text";
-	private final static String ANY_BODY_TEXT = "Body text";
-
-	Gson gson;
 	Random generator;
 	
 	CouchbaseClient client;
 	MailStorage mailStorageQueue;
 
-	MailUser mail1;
 	SerializedMail mailSerialized1;
 	String mailDocumentKey1;
 
-	MailTrade mail2;
 	SerializedMail mailSerialized2;
 	String mailDocumentKey2;
 
-	MailUser mail3;
 	SerializedMail mailSerialized3;
 	String mailDocumentKey3;
 
@@ -71,28 +59,18 @@ public class MailStorageQueueTestAddMail
 	@BeforeMethod
 	public void setUp() throws InterruptedException, ExecutionException
 	{
-		gson = new Gson();
 		generator = new Random();
 		
 		client = mock(CouchbaseClient.class);
 		mailStorageQueue = new MailStorage(client, 1, 1);
 
-		mail1 = new MailUser(ANY_SENDER, ANY_RECEIVER_1, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
-		mailSerialized1 = new SerializedMail(mail1.getReceiverID(), mail1.getCreated(), mail1.getKey(), gson.toJson(mail1));
+		mailSerialized1 = createSerializedMail(ANY_RECEIVER_1, "{content:\"mail1\"}");
 		mailDocumentKey1 = "mail_" + mailSerialized1.getKey();
 		
-		final ArrayList<Long> items = new ArrayList<Long>();
-		final int itemCount = 1 + generator.nextInt(5);
-		for (int i = 0; i < itemCount; ++i)
-		{
-			items.add(Math.abs(generator.nextLong()));
-		}
-		mail2 = new MailTrade(ANY_SENDER, ANY_RECEIVER_1, items);
-		mailSerialized2 = new SerializedMail(mail2.getReceiverID(), mail2.getCreated(), mail2.getKey(), gson.toJson(mail2));
+		mailSerialized2 = createSerializedMail(ANY_RECEIVER_1, "{content:\"mail2\"}");
 		mailDocumentKey2 = "mail_" + mailSerialized2.getKey();
 
-		mail3 = new MailUser(ANY_SENDER, ANY_RECEIVER_2, ANY_SUBJECT_TEXT, ANY_BODY_TEXT);
-		mailSerialized3 = new SerializedMail(mail3.getReceiverID(), mail3.getCreated(), mail3.getKey(), gson.toJson(mail3));
+		mailSerialized3 = createSerializedMail(ANY_RECEIVER_2, "{content:\"mail3\"}");
 		mailDocumentKey3 = "mail_" + mailSerialized3.getKey();
 
 		receiver1LookupDocumentKey = "receiver_" + ANY_RECEIVER_1;
@@ -115,7 +93,7 @@ public class MailStorageQueueTestAddMail
 		when(futureTrue.get()).thenReturn(true);
 		when(futureFalse.get()).thenReturn(false);
 	}
-
+	
 	@Test(timeOut = 1000)
 	public void addFirstMail()
 	{
@@ -314,5 +292,11 @@ public class MailStorageQueueTestAddMail
 		verify(client, times(2)).get(receiver1LookupDocumentKey);
 		verify(client).set(eq(receiver1LookupDocumentKey), eq(0), eq(receiverLookupDocument1JSON));
 		verifyZeroInteractions(client);
+	}
+
+	private SerializedMail createSerializedMail(final int receiverID, final String document)
+	{
+		final long created = (System.currentTimeMillis() / 1000) - generator.nextInt(86400);
+		return new SerializedMail(receiverID, created, UUID.randomUUID().toString(), document);
 	}
 }
