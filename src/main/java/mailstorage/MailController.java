@@ -10,27 +10,27 @@ import util.NamedThreadFactory;
 
 import com.couchbase.client.CouchbaseClient;
 
-public class MailStorage
+public class MailController
 {
 	private final CouchbaseClient client;
 	private final int numberOfThreads;
-	private final MailStorageQueueThread[] threads;
+	private final MailControllerQueueThread[] threads;
 	private final CountDownLatch latch;
 	private final ScheduledExecutorService threadPool;
 	private final Future<?> queueSizeThread;
 	
-	public MailStorage(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
+	public MailController(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
 	{
 		this.client = client;
 		this.numberOfThreads = numberOfThreads;
-		this.threads = new MailStorageQueueThread[numberOfThreads];
+		this.threads = new MailControllerQueueThread[numberOfThreads];
 		this.latch = new CountDownLatch(numberOfThreads);
 		this.threadPool = Executors.newScheduledThreadPool(1, new NamedThreadFactory("MailStorageQueueSizeThread"));
 		
-		queueSizeThread = threadPool.submit(new MailStorageQueueSizeThread(threadPool, this, 5, TimeUnit.SECONDS));
+		queueSizeThread = threadPool.submit(new MailControllerQueueSizeThread(threadPool, this, 5, TimeUnit.SECONDS));
 		for (int i = 0; i < numberOfThreads; i++)
 		{
-			threads[i] = new MailStorageQueueThread(this, i + 1, client, maxRetries);
+			threads[i] = new MailControllerQueueThread(this, i + 1, client, maxRetries);
 			threads[i].start();
 		}
 	}

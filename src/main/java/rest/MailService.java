@@ -18,7 +18,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import mailstorage.MailStorage;
+import mailstorage.MailController;
 import mailstorage.SerializedMail;
 import database.ConnectionManager;
 
@@ -28,7 +28,7 @@ import database.ConnectionManager;
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 public class MailService
 {
-	private MailStorage mailStorage;
+	private MailController mailStorage;
 	
 	@EJB
 	private ConnectionManager connectionManager;
@@ -36,7 +36,7 @@ public class MailService
 	@PostConstruct
 	protected void init()
 	{
-		mailStorage = new MailStorage(connectionManager.getConnection(), 10, 5);
+		mailStorage = new MailController(connectionManager.getConnection(), 10, 5);
 	}
 	
 	@GET

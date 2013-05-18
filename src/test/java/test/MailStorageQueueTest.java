@@ -7,8 +7,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import mailstorage.MailStorage;
-import mailstorage.MailStorageQueueSizeThread;
+import mailstorage.MailController;
+import mailstorage.MailControllerQueueSizeThread;
 
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeMethod;
@@ -21,29 +21,29 @@ public class MailStorageQueueTest
 {
 	CouchbaseClient client;
 
-	MailStorage mailStorageQueue;
+	MailController mailStorageQueue;
 
 	@BeforeMethod
 	public void setUp()
 	{
 		client = mock(CouchbaseClient.class);
 
-		mailStorageQueue = new MailStorage(client, 1, 1);
+		mailStorageQueue = new MailController(client, 1, 1);
 	}
 
 	@Test
 	public void queueSize() throws InterruptedException
 	{
 		final ScheduledExecutorService threadPool = mock(ScheduledExecutorService.class);
-		final MailStorage queue = spy(mailStorageQueue);
+		final MailController queue = spy(mailStorageQueue);
 		when(queue.size()).thenReturn(5).thenReturn(10).thenReturn(0);
 
-		MailStorageQueueSizeThread queueSize = new MailStorageQueueSizeThread(threadPool, queue, 5L, TimeUnit.SECONDS);
+		MailControllerQueueSizeThread queueSize = new MailControllerQueueSizeThread(threadPool, queue, 5L, TimeUnit.SECONDS);
 		queueSize.run();
 		queueSize.run();
 		queueSize.run();
 
-		verify(threadPool, times(3)).schedule(any(MailStorageQueueSizeThread.class), eq(5L), eq(TimeUnit.SECONDS));
+		verify(threadPool, times(3)).schedule(any(MailControllerQueueSizeThread.class), eq(5L), eq(TimeUnit.SECONDS));
 		verifyZeroInteractions(threadPool);
 		verify(queue, times(3)).size();
 		verifyZeroInteractions(queue);

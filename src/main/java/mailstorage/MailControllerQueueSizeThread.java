@@ -4,16 +4,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 
-public class MailStorageQueueSizeThread implements Runnable
+public class MailControllerQueueSizeThread implements Runnable
 {
 	private final ScheduledExecutorService threadPool;
-	private final MailStorage mailStorageQueue;
+	private final MailController mailStorageQueue;
 	private final long delay;
 	private final TimeUnit timeUnit;
 	
 	private int lastSize = 0;
 	
-	public MailStorageQueueSizeThread(final ScheduledExecutorService threadPool, final MailStorage mailStorageQueue, final long delay, final TimeUnit timeUnit)
+	public MailControllerQueueSizeThread(final ScheduledExecutorService threadPool, final MailController mailStorageQueue, final long delay, final TimeUnit timeUnit)
 	{
 		this.threadPool = threadPool;
 		this.mailStorageQueue = mailStorageQueue;

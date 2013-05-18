@@ -10,7 +10,7 @@ import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.couchbase.client.CouchbaseClient;
 
-class MailStorageQueueThread extends Thread
+class MailControllerQueueThread extends Thread
 {
 	private final static int RETRY_DELAY = 50;
 	
@@ -19,11 +19,11 @@ class MailStorageQueueThread extends Thread
 	private final IntObjectOpenHashMap<ReceiverLookupDocument> lookupMap;
 	private final IntOpenHashSet receiverOnQueue;
 	private final int threadNo;
-	private final MailStorage mailStorageQueue;
+	private final MailController mailStorageQueue;
 	private final CouchbaseClient client;
 	private final int maxRetries;
 	
-	protected MailStorageQueueThread(final MailStorage mailStorageQueue, final int threadNo, final CouchbaseClient client, final int maxRetries)
+	protected MailControllerQueueThread(final MailController mailStorageQueue, final int threadNo, final CouchbaseClient client, final int maxRetries)
 	{
 		super("MailStorageQueue-thread-" + threadNo);
 		this.incomingQueue = new LinkedBlockingQueue<SerializedMail>();

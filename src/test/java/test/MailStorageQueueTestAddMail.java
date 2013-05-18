@@ -7,7 +7,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-import mailstorage.MailStorage;
+import mailstorage.MailController;
 import mailstorage.ReceiverLookupDocument;
 import mailstorage.SerializedMail;
 import net.spy.memcached.OperationTimeoutException;
@@ -28,7 +28,7 @@ public class MailStorageQueueTestAddMail
 	Random generator;
 	
 	CouchbaseClient client;
-	MailStorage mailStorageQueue;
+	MailController mailStorageQueue;
 
 	SerializedMail mailSerialized1;
 	String mailDocumentKey1;
@@ -62,7 +62,7 @@ public class MailStorageQueueTestAddMail
 		generator = new Random();
 		
 		client = mock(CouchbaseClient.class);
-		mailStorageQueue = new MailStorage(client, 1, 1);
+		mailStorageQueue = new MailController(client, 1, 1);
 
 		mailSerialized1 = createSerializedMail(ANY_RECEIVER_1, "{content:\"mail1\"}");
 		mailDocumentKey1 = "mail_" + mailSerialized1.getKey();
