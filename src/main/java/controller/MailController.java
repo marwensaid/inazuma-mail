@@ -16,15 +16,15 @@ public class MailController
 	private final MailControllerQueueThread[] threads;
 	private final CountDownLatch latch;
 
-	private final BasicStatisticValue mailFetched = new BasicStatisticValue("MailController", "mailFetched");
-	private final BasicStatisticValue mailAdded = new BasicStatisticValue("MailController", "mailAdded");
-	private final BasicStatisticValue mailDeleted = new BasicStatisticValue("MailController", "mailDeleted");
+	private final BasicStatisticValue mailFetched = new BasicStatisticValue("MailService", "mailFetched");
+	private final BasicStatisticValue mailAdded = new BasicStatisticValue("MailService", "mailAdded");
+	private final BasicStatisticValue mailDeleted = new BasicStatisticValue("MailService", "mailDeleted");
 	
-	private final BasicStatisticValue lookupRetries = new BasicStatisticValue("MailController", "lookupRetries");
-	private final BasicStatisticValue lookupPersisted = new BasicStatisticValue("MailController", "lookupPersisted");
+	private final BasicStatisticValue lookupRetries = new BasicStatisticValue("MailService", "retriesLookup");
+	private final BasicStatisticValue lookupPersisted = new BasicStatisticValue("MailService", "persistedLookup");
 	
-	private final BasicStatisticValue mailRetries = new BasicStatisticValue("MailController", "mailRetries");
-	private final BasicStatisticValue mailPersisted = new BasicStatisticValue("MailController", "mailPersisted");
+	private final BasicStatisticValue mailRetries = new BasicStatisticValue("MailService", "retriesMail");
+	private final BasicStatisticValue mailPersisted = new BasicStatisticValue("MailService", "persistedMail");
 
 	public MailController(final CouchbaseClient client, final int numberOfThreads, final int maxRetries)
 	{
@@ -39,7 +39,7 @@ public class MailController
 			threads[i].start();
 		}
 
-		new CustomStatisticValue<Integer>("MailController", "queueSize", new QueueSizeCollector(this));
+		new CustomStatisticValue<Integer>("MailService", "queueSize", new QueueSizeCollector(this));
 	}
 
 	public String getMailKeys(final int receiverID)
