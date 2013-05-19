@@ -67,9 +67,9 @@ public class MailService
 	@Path("/mail/{receiverID}")
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_PLAIN)
-	public String putMail(@PathParam("receiverID") int receiverID, @FormParam("document") String document)
+	public String putMail(@PathParam("receiverID") int receiverID, @FormParam("document") String document, @FormParam("created") long created)
 	{
-		final SerializedMail serializedMail = new SerializedMail(receiverID, System.currentTimeMillis() / 1000, UUID.randomUUID().toString(), document);
+		final SerializedMail serializedMail = new SerializedMail(receiverID, created, UUID.randomUUID().toString(), document);
 		mailController.addMail(serializedMail);
 		return serializedMail.getKey();
 	}
