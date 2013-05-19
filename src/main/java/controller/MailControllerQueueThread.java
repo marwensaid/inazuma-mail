@@ -50,8 +50,12 @@ class MailControllerQueueThread extends Thread
 
 	protected String getMailKeys(final int receiverID)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		final ReceiverLookupDocument receiverLookupDocument = getLookup(receiverID);
+		if (receiverLookupDocument == null)
+		{
+			return null;
+		}
+		return receiverLookupDocument.toString();
 	}
 	
 	protected int size()

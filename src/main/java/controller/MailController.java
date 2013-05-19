@@ -44,7 +44,7 @@ public class MailController
 
 	public String getMailKeys(final int receiverID)
 	{
-		return threads[receiverID].getMailKeys(receiverID);
+		return threads[calculateThreadNumber(receiverID)].getMailKeys(receiverID);
 	}
 
 	public String getMail(final String mailKey)

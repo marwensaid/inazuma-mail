@@ -1,7 +1,6 @@
 package model;
 
 import java.lang.reflect.Type;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,9 +45,10 @@ public class ReceiverLookupDocument implements StatusMessageObject
 		return lookup.size();
 	}
 
-	public Set<String> keySet()
+	@Override
+	public String toString()
 	{
-		return lookup.keySet();
+		return toJSON();
 	}
 
 	public String toJSON()
